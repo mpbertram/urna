@@ -521,6 +521,28 @@ type EntidadeBoletimUrna struct {
 	ChaveAssinaturaVotosVotavel []byte                       // Chave de assinatura pública das tuplas dos votáveis.
 }
 
+// Read result with reflect.TypeOf; it will be one of (DadosSecao, DadosSA)
+func (b EntidadeBoletimUrna) ReadDadosSecaoSA() (interface{}, error) {
+	switch b.DadosSecaoSA.Tag {
+	case 0:
+		var d DadosSecao
+		err := FillSequence(b.DadosSecaoSA.Bytes, &d)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	case 1:
+		var d DadosSA
+		err := FillSequence(b.DadosSecaoSA.Bytes, &d)
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	}
+
+	return nil, errors.New("could not read dados secao/SA")
+}
+
 // DEMAIS SEQUENCES E CHOICES (ordem alfabética)
 type ApuracaoEletronica struct {
 	Tipoapuracao   asn1.Enumerated
@@ -556,6 +578,28 @@ type CorrespondenciaResultado struct {
 	Carga         Carga         // Informações da carga da urna eletrônica.
 }
 
+// Read result with reflect.TypeOf; it will be one of (IdentificacaoSecaoEleitoral, IdentificacaoContingencia)
+func (cr CorrespondenciaResultado) ReadIdentificacao() (interface{}, error) {
+	switch cr.Identificacao.Tag {
+	case 0:
+		var i IdentificacaoSecaoEleitoral
+		err := FillSequence(cr.Identificacao.Bytes, &i)
+		if err != nil {
+			return nil, err
+		}
+		return i, nil
+	case 1:
+		var i IdentificacaoContingencia
+		_, err := asn1.Unmarshal(cr.Identificacao.Bytes, &i)
+		if err != nil {
+			return nil, errors.New("could not unmarshal")
+		}
+		return i, nil
+	}
+
+	return nil, errors.New("could not read identificacao")
+}
+
 // Identificador com informações do <glossario id='boletim-de-urna'>BU</glossario>) de <glossario id='sistema-de-apuracao'>SA</glossario>).
 type DadosSA struct {
 	JuntaApuradora          int               // Número da junta eleitoral responsával pela apuração dos votos.
@@ -567,7 +611,7 @@ type DadosSA struct {
 type DadosSecao struct {
 	DataHoraAbertura                 DataHoraJE // Data e hora do início da aquisição do voto (Primeiro voto) no formato adotado pela Justiça Eleitoral (YYYYMMDDThhmmss).
 	DataHoraEncerramento             DataHoraJE // Data e hora do término da aquisição do voto (Último voto) no formato adotado pela Justiça Eleitoral (YYYYMMDDThhmmss).
-	DataHoraDesligamentoVotoImpresso DataHoraJE // Data e hora do desligamento da impressão do voto (somente se tinha voto impresso na seção e se ocorreu o cancelamento) (YYYYMMDDThhmmss).
+	DataHoraDesligamentoVotoImpresso DataHoraJE `asn1:"optional"` // Data e hora do desligamento da impressão do voto (somente se tinha voto impresso na seção e se ocorreu o cancelamento) (YYYYMMDDThhmmss).
 }
 
 // Identificador com informações de histórico de voto impresso
