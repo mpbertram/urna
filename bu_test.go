@@ -49,9 +49,9 @@ func ComputeVotes(b EntidadeBoletimUrna) map[string]map[string]int {
 					case Nominal, Legenda:
 						votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] = votoVotavel.QuantidadeVotos
 					case Branco:
-						votosPorCargo[cc.String()][Branco.String()]++
+						votosPorCargo[cc.String()][Branco.String()] = votoVotavel.QuantidadeVotos
 					case Nulo:
-						votosPorCargo[cc.String()][Nulo.String()]++
+						votosPorCargo[cc.String()][Nulo.String()] = votoVotavel.QuantidadeVotos
 					}
 				}
 			}
