@@ -6,19 +6,42 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
+
+func ReadAllBu(dir string) ([]EntidadeBoletimUrna, error) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return []EntidadeBoletimUrna{}, err
+	}
+
+	var bus []EntidadeBoletimUrna
+	for _, e := range dirEntries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".bu") {
+			bu, err := ReadBu(strings.Join([]string{dir, e.Name()}, "/"))
+			if err != nil {
+				fmt.Println("error reading file", err)
+			}
+			bus = append(bus, bu)
+		}
+	}
+
+	return bus, nil
+}
 
 func ReadBu(file string) (EntidadeBoletimUrna, error) {
 	f, err := os.ReadFile(file)
 	if err != nil {
-		return EntidadeBoletimUrna{}, errors.New("invalid input file")
+		return EntidadeBoletimUrna{}, err
 	}
 
 	var e EntidadeEnvelopeGenerico
 	_, err = asn1.Unmarshal(f, &e)
 	if err != nil {
-		return EntidadeBoletimUrna{}, errors.New("error unmarshalling input file")
+		return EntidadeBoletimUrna{}, err
 	}
 
 	if TipoEnvelope(e.TipoEnvelope) != EnvelopeBoletimUrna {
@@ -28,31 +51,39 @@ func ReadBu(file string) (EntidadeBoletimUrna, error) {
 	var b EntidadeBoletimUrna
 	_, err = asn1.Unmarshal(e.Conteudo, &b)
 	if err != nil {
-		return EntidadeBoletimUrna{}, errors.New("error unmarshalling bu from envelope")
+		return EntidadeBoletimUrna{}, err
 	}
 
 	return b, nil
 }
 
-func ComputeVotes(b EntidadeBoletimUrna) map[string]map[string]int {
+func ComputeVotes(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) map[string]map[string]int {
+	if len(cargos) == 0 {
+		cargos = ValidCargoConstitucional()
+	}
+
 	votosPorCargo := make(map[string]map[string]int)
-	for _, cargo := range ValidCargoConstitucional() {
+	for _, cargo := range cargos {
 		votosPorCargo[cargo.String()] = map[string]int{}
 	}
 
-	for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
-		for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
-			for _, votoCargo := range votacao.TotaisVotosCargo {
-				for _, votoVotavel := range votoCargo.VotosVotaveis {
-					cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
+	for _, b := range boletins {
+		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
+			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
+				for _, votoCargo := range votacao.TotaisVotosCargo {
+					for _, votoVotavel := range votoCargo.VotosVotaveis {
+						cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
 
-					switch TipoVoto(votoVotavel.TipoVoto) {
-					case Nominal, Legenda:
-						votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] = votoVotavel.QuantidadeVotos
-					case Branco:
-						votosPorCargo[cc.String()][Branco.String()] = votoVotavel.QuantidadeVotos
-					case Nulo:
-						votosPorCargo[cc.String()][Nulo.String()] = votoVotavel.QuantidadeVotos
+						if slices.Contains(cargos, cc) {
+							switch TipoVoto(votoVotavel.TipoVoto) {
+							case Nominal, Legenda:
+								votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] += votoVotavel.QuantidadeVotos
+							case Branco:
+								votosPorCargo[cc.String()][Branco.String()] += votoVotavel.QuantidadeVotos
+							case Nulo:
+								votosPorCargo[cc.String()][Nulo.String()] += votoVotavel.QuantidadeVotos
+							}
+						}
 					}
 				}
 			}
@@ -63,12 +94,14 @@ func ComputeVotes(b EntidadeBoletimUrna) map[string]map[string]int {
 }
 
 func Test(t *testing.T) {
-	bu, err := ReadBu("test-data/urna.bu")
+	bus, err := ReadAllBu("test-data")
+	bu := bus[0]
+
 	if err != nil {
 		t.Error("could not read BU")
 	}
 
-	fmt.Println(ComputeVotes(bu))
+	fmt.Println(ComputeVotes(bus, []CargoConstitucional{Presidente}))
 
 	d, err := bu.ReadDadosSecaoSA()
 	if err != nil {
@@ -105,6 +138,6 @@ func Test(t *testing.T) {
 		t.Error("wrong local", i.(IdentificacaoSecaoEleitoral).Local)
 	}
 	if i.(IdentificacaoSecaoEleitoral).Secao != 55 {
-		t.Error("wrong local", i.(IdentificacaoSecaoEleitoral).Secao)
+		t.Error("wrong secao", i.(IdentificacaoSecaoEleitoral).Secao)
 	}
 }
