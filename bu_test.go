@@ -93,7 +93,7 @@ func ComputeVotes(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) 
 	return votosPorCargo
 }
 
-func Test(t *testing.T) {
+func TestBu(t *testing.T) {
 	bus, err := ReadAllBu("test-data")
 	bu := bus[0]
 
