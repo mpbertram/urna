@@ -62,8 +62,8 @@ func (rdv EntidadeRegistroDigitalVoto) ReadEleicoes() (interface{}, error) {
 		}
 		return e, nil
 	case 1:
-		var e EleicaoSA
-		err := FillSequence(rdv.Eleicoes.Bytes, &e)
+		var e []EleicaoSA
+		err := FillSlice(rdv.Eleicoes.Bytes, &e)
 		if err != nil {
 			return nil, err
 		}
