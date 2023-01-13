@@ -52,6 +52,7 @@ type EntidadeRegistroDigitalVoto struct {
 	Eleicoes      asn1.RawValue               // Grupo de votos de todas as eleições.
 }
 
+// Result is one of ([]EleicaoVota, []EleicaoSA)
 func (rdv EntidadeRegistroDigitalVoto) ReadEleicoes() (interface{}, error) {
 	switch rdv.Eleicoes.Tag {
 	case 0:
@@ -73,12 +74,6 @@ func (rdv EntidadeRegistroDigitalVoto) ReadEleicoes() (interface{}, error) {
 	return nil, errors.New("could not read dados secao/SA")
 }
 
-// Identificador para escolha de Número de cargo constitucional ou Número cargo/consulta livre.
-// CodigoCargoConsulta ::= CHOICE {
-//     cargoConstitucional         [1] CargoConstitucional        // Cargos constitucionais (São dos cargos previstos na constituição).
-//     numeroCargoConsultaLivre    [2] NumeroCargoConsultaLivre    // Código das consultas definido durante o cadastramento da Eleção.
-// }
-
 // Votos para todos os cargos de uma eleição.
 type EleicaoVota struct {
 	IdEleicao   int          // Identificador da eleição.
@@ -93,31 +88,6 @@ type EleicaoSA struct {
 	VotosCargos   []VotosCargo  // Grupo de cédulas da eleição.
 }
 
-// Eleicoes ::= CHOICE {
-//     eleicoesVota    [0] []EleicaoVota    // Grupo de votos de todas as eleições do Vota.
-//     eleicoesSA      [1] []EleicaoSA       // Grupo de votos de todas as eleições do SA.
-// }
-
-// Tipos de identificadores eleitorais (Se o pacote é gerado por (<glossario id='processo'>processo</glossario>, <glossario id='pleito'>pleito</glossario> ou <glossario id='eleicao'>eleição</glossario>).
-// IDEleitoral ::= CHOICE {
-//     idProcessoEleitoral [1] IDProcessoEleitoral    // Identificador do <glossario id='processo-eleitoral'>processo eleitoral</glossario>.
-//     idPleito            [2] IDPleito               // Identificador do <glossario id='pleito'>pleito</glossario>.
-//     idEleicao           [3] IDEleicao               // Identificador da <glossario id='eleicao'>eleição</glossario>.
-// }
-
-// Identificação da Urna (Se é de seção eleitoral ou de Mesa Receptora de Justificativa).
-// IdentificacaoUrna ::= CHOICE {
-//     identificacaoSecaoEleitoral    [0] IdentificacaoSecaoEleitoral     // Urna de seção eleitoral.
-//     identificacaoContingencia      [1] IdentificacaoContingencia        // Urna de contingência.
-// }
-
-// TipoApuracaoSA ::= CHOICE {
-//     apuracaoMistaMR             [0] ApuracaoMistaMR
-//     apuracaoMistaBUAE           [1] ApuracaoMistaBUAE
-//     apuracaoTotalmenteManual    [2] ApuracaoTotalmenteManualDigitacaoAE
-//     apuracaoEletronica          [3] ApuracaoEletronica
-// }
-
 // Votos de um eleitor para todas as escolhas de um cargo.
 type Voto struct {
 	TipoVoto  asn1.Enumerated // Tipo do voto registrado.
@@ -129,4 +99,25 @@ type VotosCargo struct {
 	IdCargo            asn1.RawValue      // Código do cargo votado.
 	QuantidadeEscolhas QuantidadeEscolhas // Quantidade de escolhas para o cargo.
 	Votos              []Voto             // Votos do cargo.
+}
+
+// Result is one of CargoConstitucional or NumeroCargoConsultaLivre
+func (vc VotosCargo) ReadIdCargo() (interface{}, error) {
+	switch vc.IdCargo.Tag {
+	case 1:
+		cc, err := CargoConstitucionalFromData(vc.IdCargo.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return cc, nil
+	case 2:
+		var n NumeroCargoConsultaLivre
+		_, err := asn1.Unmarshal(vc.IdCargo.Bytes, &n)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	}
+
+	return nil, errors.New("could not read cargo")
 }

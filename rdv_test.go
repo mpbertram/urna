@@ -27,8 +27,17 @@ func TestRdv(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = rdv.Rdv.ReadEleicoes()
+	e, err := rdv.Rdv.ReadEleicoes()
 	if err != nil {
 		t.Error(err)
+	}
+
+	for _, eleicao := range e.([]EleicaoVota) {
+		for _, votosCargo := range eleicao.VotosCargos {
+			_, err := votosCargo.ReadIdCargo()
+			if err != nil {
+				t.Error(err)
+			}
+		}
 	}
 }
