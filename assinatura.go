@@ -1,5 +1,7 @@
 package urna
 
+import "encoding/asn1"
+
 // ENUMS
 // Tipos de algoritmos de assinatura (cepesc é o algoritmo padrão (ainda não há previsão de uso dos demais)).
 
@@ -48,7 +50,7 @@ type EntidadeAssinatura struct {
 // Podendo ter dois tipos de assinatura (Hardware (HW) e Software (SW)).
 // Esses arquivos são informados na Mídia de Resultado quando a urna eletrônica é encerrada.
 type EntidadeAssinaturaResultado struct {
-	ModeloUrna   ModeloUrna         // Modelo da urna eletrônica.
+	ModeloUrna   asn1.Enumerated    // Modelo da urna eletrônica.
 	AssinaturaSW EntidadeAssinatura // Assinatura realizada via software (normalmente CEPESC).
 	AssinaturaHW EntidadeAssinatura // Assinatura realizada via hardware de segurança da urna eletrônica.
 }
@@ -57,12 +59,12 @@ type EntidadeAssinaturaResultado struct {
 // Informações do algoritmo de hash.
 // Informações do algoritmo de assinatura .
 type AlgoritmoAssinaturaInfo struct {
-	Algoritmo AlgoritmoAssinatura // Tipo do algoritmo de assinatura.
-	Bits      int                 // Tamanho da assinatura.
+	Algoritmo asn1.Enumerated // Tipo do algoritmo de assinatura.
+	Bits      int             // Tamanho da assinatura.
 }
 
 type AlgoritmoHashInfo struct {
-	Algoritmo AlgoritmoHash // Tipo do algoritmo de hash.
+	Algoritmo asn1.Enumerated // Tipo do algoritmo de hash.
 }
 
 // Informações dos arquivos assinados.
