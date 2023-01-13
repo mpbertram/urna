@@ -1,6 +1,8 @@
 package urna
 
 import (
+	"crypto/ed25519"
+	"crypto/sha512"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"testing"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func ReadAllBu(dir string) ([]EntidadeBoletimUrna, error) {
@@ -93,12 +96,63 @@ func ComputeVotes(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) 
 	return votosPorCargo
 }
 
+func validateVotos(boletins []EntidadeBoletimUrna) error {
+	for _, b := range boletins {
+		pub := ed25519.PublicKey(b.ChaveAssinaturaVotosVotavel)
+		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
+			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
+				for _, votoCargo := range votacao.TotaisVotosCargo {
+					for _, votoVotavel := range votoCargo.VotosVotaveis {
+						cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
+						codigoCargo := fmt.Sprint(int(cc))
+
+						tipoVoto := fmt.Sprint(votoVotavel.TipoVoto)
+						qtdVotos := fmt.Sprint(votoVotavel.QuantidadeVotos)
+
+						codigo := fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)
+						if codigo == "0" {
+							codigo = ""
+						}
+
+						partido := fmt.Sprint(votoVotavel.IdentificacaoVotavel.Partido)
+						if partido == "0" {
+							partido = ""
+						}
+
+						carga := b.Urna.CorrespondenciaResultado.Carga.CodigoCarga
+
+						payload := codigoCargo + tipoVoto + qtdVotos + codigo + partido + carga
+						payloadBytes := []byte{}
+						for _, r := range payload {
+							encodedRune, _ := charmap.ISO8859_1.EncodeRune(r)
+							payloadBytes = append(payloadBytes, encodedRune)
+						}
+
+						checksum := sha512.Sum512(payloadBytes)
+						ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
+						if !ok {
+							return errors.New("error in verification")
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func TestBu(t *testing.T) {
 	bus, err := ReadAllBu("test-data")
 	bu := bus[0]
 
 	if err != nil {
 		t.Error("could not read BU")
+	}
+
+	err = validateVotos(bus)
+	if err != nil {
+		t.Error(err)
 	}
 
 	v := ComputeVotes(bus, []CargoConstitucional{Presidente})

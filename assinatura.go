@@ -1,3 +1,5 @@
+// Cf. https://www.tse.jus.br/eleicoes/eleicoes-2022/documentacao-tecnica-do-software-da-urna-eletronica
+
 package urna
 
 import "encoding/asn1"
