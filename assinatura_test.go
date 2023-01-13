@@ -1,6 +1,7 @@
 package urna
 
 import (
+	"crypto/x509"
 	"encoding/asn1"
 	"os"
 	"testing"
@@ -22,7 +23,11 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 }
 
 func TestAssinatura(t *testing.T) {
-	_, err := ReadAssinatura("test-data/urna.vscmr")
+	a, err := ReadAssinatura("test-data/urna.vscmr")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = x509.ParseCertificate(a.AssinaturaHW.CertificadoDigital)
 	if err != nil {
 		t.Error(err)
 	}

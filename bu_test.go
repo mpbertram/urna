@@ -101,7 +101,10 @@ func TestBu(t *testing.T) {
 		t.Error("could not read BU")
 	}
 
-	fmt.Println(ComputeVotes(bus, []CargoConstitucional{Presidente}))
+	v := ComputeVotes(bus, []CargoConstitucional{Presidente})
+	if v[Presidente.String()][Nulo.String()] != 6 {
+		t.Errorf("wrong count for Nulo (%d)", v[Presidente.String()][Nulo.String()])
+	}
 
 	d, err := bu.ReadDadosSecaoSA()
 	if err != nil {
