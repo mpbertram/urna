@@ -7,10 +7,13 @@ import (
 
 func TestBu(t *testing.T) {
 	bus, err := ReadAllBu("test-data")
-	bu := bus[0]
-
 	if err != nil {
-		t.Error("could not read BU")
+		t.Error("could not read BUs", err)
+	}
+
+	bu, err := bus[0].ReadBu()
+	if err != nil {
+		t.Error("could not read BU", err)
 	}
 
 	err = ValidateVotos(bus)

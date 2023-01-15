@@ -6,6 +6,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -13,28 +14,12 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func ReadAllBu(dir string) ([]EntidadeBoletimUrna, error) {
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		return []EntidadeBoletimUrna{}, err
-	}
-
-	var bus []EntidadeBoletimUrna
-	for _, e := range dirEntries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".bu") {
-			bu, err := ReadBu(strings.Join([]string{dir, e.Name()}, "/"))
-			if err != nil {
-				fmt.Println("error reading file", err)
-			}
-			bus = append(bus, bu)
-		}
-	}
-
-	return bus, nil
+type BuEntry struct {
+	path string
 }
 
-func ReadBu(file string) (EntidadeBoletimUrna, error) {
-	f, err := os.ReadFile(file)
+func (b BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
+	f, err := os.ReadFile(b.path)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
@@ -49,16 +34,36 @@ func ReadBu(file string) (EntidadeBoletimUrna, error) {
 		return EntidadeBoletimUrna{}, errors.New("envelope is not a bu")
 	}
 
-	var b EntidadeBoletimUrna
-	_, err = asn1.Unmarshal(e.Conteudo, &b)
+	var bu EntidadeBoletimUrna
+	_, err = asn1.Unmarshal(e.Conteudo, &bu)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
 
-	return b, nil
+	return bu, nil
 }
 
-func ComputeVotos(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) map[string]map[string]int {
+func ReadAllBu(dir string) ([]BuEntry, error) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return []BuEntry{}, err
+	}
+
+	var bus []BuEntry
+	for _, e := range dirEntries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".bu") {
+			bu := BuEntry{strings.Join([]string{dir, e.Name()}, "/")}
+			if err != nil {
+				log.Println("error reading file", err)
+			}
+			bus = append(bus, bu)
+		}
+	}
+
+	return bus, nil
+}
+
+func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]map[string]int {
 	if len(cargos) == 0 {
 		cargos = ValidCargoConstitucional()
 	}
@@ -68,7 +73,12 @@ func ComputeVotos(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) 
 		votosPorCargo[cargo.String()] = map[string]int{}
 	}
 
-	for _, b := range boletins {
+	for _, entry := range buEntries {
+		b, err := entry.ReadBu()
+		if err != nil {
+			log.Println("could not read", entry.path)
+		}
+
 		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
 			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
 				for _, votoCargo := range votacao.TotaisVotosCargo {
@@ -94,8 +104,13 @@ func ComputeVotos(boletins []EntidadeBoletimUrna, cargos []CargoConstitucional) 
 	return votosPorCargo
 }
 
-func ValidateVotos(boletins []EntidadeBoletimUrna) error {
-	for _, b := range boletins {
+func ValidateVotos(buEntries []BuEntry) error {
+	for _, entry := range buEntries {
+		b, err := entry.ReadBu()
+		if err != nil {
+			log.Println("could not read", entry.path)
+		}
+
 		pub := ed25519.PublicKey(b.ChaveAssinaturaVotosVotavel)
 		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
 			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {

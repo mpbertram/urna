@@ -590,7 +590,7 @@ func (cr CorrespondenciaResultado) ReadIdentificacao() (interface{}, error) {
 		return i, nil
 	case 1:
 		var i IdentificacaoContingencia
-		_, err := asn1.Unmarshal(cr.Identificacao.Bytes, &i)
+		err := FillSequence(cr.Identificacao.Bytes, &i)
 		if err != nil {
 			return nil, errors.New("could not unmarshal")
 		}
