@@ -1,11 +1,13 @@
 package urna
 
 import (
+	"archive/zip"
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -18,8 +20,8 @@ type BuEntry struct {
 	path string
 }
 
-func (b BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
-	f, err := os.ReadFile(b.path)
+func (entry BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
+	f, err := os.ReadFile(entry.path)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
@@ -34,13 +36,13 @@ func (b BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
 		return EntidadeBoletimUrna{}, errors.New("envelope is not a bu")
 	}
 
-	var bu EntidadeBoletimUrna
-	_, err = asn1.Unmarshal(e.Conteudo, &bu)
+	var b EntidadeBoletimUrna
+	_, err = asn1.Unmarshal(e.Conteudo, &b)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
 
-	return bu, nil
+	return b, nil
 }
 
 func ReadAllBu(dir string) ([]BuEntry, error) {
@@ -61,6 +63,69 @@ func ReadAllBu(dir string) ([]BuEntry, error) {
 	}
 
 	return bus, nil
+}
+
+func ProcessAllZips(dir string, process func([]BuEntry) error) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range dirEntries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".zip") {
+			err = ProcessZip((strings.Join([]string{dir, e.Name()}, "/")), process)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+}
+
+func ProcessZip(path string, process func([]BuEntry) error) error {
+	tmpPath, err := os.MkdirTemp(".", "0755")
+	if err != nil {
+		return err
+	}
+
+	ExtractZip(path, tmpPath)
+
+	bus, err := ReadAllBu(tmpPath)
+	if err != nil {
+		return err
+	}
+
+	err = process(bus)
+
+	os.RemoveAll(tmpPath)
+
+	return err
+}
+
+func ExtractZip(src string, dst string) {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if strings.HasSuffix(f.Name, ".bu") {
+			rc, err := f.Open()
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			target, err := os.Create(strings.Join([]string{dst, f.Name}, "/"))
+			io.Copy(target, rc)
+
+			if err != nil {
+				log.Println(err)
+			}
+
+			rc.Close()
+		}
+	}
 }
 
 func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]map[string]int {

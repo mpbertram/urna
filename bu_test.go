@@ -5,6 +5,26 @@ import (
 	"testing"
 )
 
+func TestZips(t *testing.T) {
+	all := make(map[string]map[string]int)
+	ProcessAllZips("test-data", func(be []BuEntry) error {
+		votes := ComputeVotos(be, []CargoConstitucional{Presidente})
+		for k1, v1 := range votes {
+			if all[k1] == nil {
+				all[k1] = v1
+			} else {
+				for k2, v2 := range v1 {
+					all[k1][k2] = all[k1][k2] + v2
+				}
+			}
+		}
+		return nil
+	})
+	if all[Presidente.String()][Nulo.String()] != 6 {
+		t.Errorf("Wrong count for Nulo (%d)", all[Presidente.String()][Nulo.String()])
+	}
+}
+
 func TestBu(t *testing.T) {
 	bus, err := ReadAllBu("test-data")
 	if err != nil {
