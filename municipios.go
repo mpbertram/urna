@@ -3,6 +3,7 @@ package urna
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -23,22 +24,25 @@ func (m Municipio) String() string {
 	f, err := os.Open("resource/municipios.csv")
 	if err != nil {
 		log.Println(err)
-		return ""
+		return fmt.Sprint(m.Id)
 	}
 	defer f.Close()
 
 	r := csv.NewReader(f)
 	for {
 		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Println(err)
-			return ""
+			return fmt.Sprint(m.Id)
 		}
 
 		id, err := strconv.Atoi(record[0])
 		if err != nil {
 			log.Println(err)
-			return ""
+			return fmt.Sprint(m.Id)
 		}
 
 		if id == m.Id {
@@ -47,4 +51,6 @@ func (m Municipio) String() string {
 			return s
 		}
 	}
+
+	return fmt.Sprint(m.Id)
 }
