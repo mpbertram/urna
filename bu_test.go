@@ -5,11 +5,16 @@ import (
 	"testing"
 )
 
-func TestZips(t *testing.T) {
+func TestZip(t *testing.T) {
 	all := make(map[string]map[string]int)
 	ProcessAllZip("test-data", func(bu EntidadeBoletimUrna) error {
-		votes := ComputeVotosBu(bu, []CargoConstitucional{Presidente})
-		for cargo, candidato := range votes {
+		err := ValidateVotosBu(bu)
+		if err != nil {
+			t.Error(err)
+		}
+
+		votos := ComputeVotosBu(bu, []CargoConstitucional{Presidente})
+		for cargo, candidato := range votos {
 			if all[cargo] == nil {
 				all[cargo] = candidato
 			} else {

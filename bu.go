@@ -170,7 +170,8 @@ func ComputeVotosBu(b EntidadeBoletimUrna, cargos []CargoConstitucional) map[str
 					if slices.Contains(cargos, cc) {
 						switch TipoVoto(votoVotavel.TipoVoto) {
 						case Nominal, Legenda:
-							votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] += votoVotavel.QuantidadeVotos
+							candidato := fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)
+							votosPorCargo[cc.String()][candidato] += votoVotavel.QuantidadeVotos
 						case Branco:
 							votosPorCargo[cc.String()][Branco.String()] += votoVotavel.QuantidadeVotos
 						case Nulo:
@@ -210,10 +211,11 @@ func ValidateVotosBu(b EntidadeBoletimUrna) error {
 			for _, votoCargo := range votacao.TotaisVotosCargo {
 				for _, votoVotavel := range votoCargo.VotosVotaveis {
 
-					checksum := sha512.Sum512(
-						buildPayload(votoCargo, votoVotavel, b.Urna.CorrespondenciaResultado.Carga))
+					payload := buildPayload(votoCargo, votoVotavel, b.Urna.CorrespondenciaResultado.Carga)
+					checksum := sha512.Sum512(payload)
 					ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
 					if !ok {
+						log.Println("error in verification", payload)
 						return errors.New("error in verification")
 					}
 				}
