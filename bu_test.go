@@ -7,14 +7,14 @@ import (
 
 func TestZips(t *testing.T) {
 	all := make(map[string]map[string]int)
-	ProcessAllZips("test-data", func(be []BuEntry) error {
-		votes := ComputeVotos(be, []CargoConstitucional{Presidente})
-		for k1, v1 := range votes {
-			if all[k1] == nil {
-				all[k1] = v1
+	ProcessAllZip("test-data", func(bu EntidadeBoletimUrna) error {
+		votes := ComputeVotosBu(bu, []CargoConstitucional{Presidente})
+		for cargo, candidato := range votes {
+			if all[cargo] == nil {
+				all[cargo] = candidato
 			} else {
-				for k2, v2 := range v1 {
-					all[k1][k2] = all[k1][k2] + v2
+				for candidato, numVotos := range candidato {
+					all[cargo][candidato] = all[cargo][candidato] + numVotos
 				}
 			}
 		}

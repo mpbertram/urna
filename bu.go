@@ -2,6 +2,7 @@ package urna
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/asn1"
@@ -26,8 +27,17 @@ func (entry BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
 		return EntidadeBoletimUrna{}, err
 	}
 
+	b, err := readBuFromBytes(f)
+	if err != nil {
+		return EntidadeBoletimUrna{}, err
+	}
+
+	return b, nil
+}
+
+func readBuFromBytes(bytes []byte) (EntidadeBoletimUrna, error) {
 	var e EntidadeEnvelopeGenerico
-	_, err = asn1.Unmarshal(f, &e)
+	_, err := asn1.Unmarshal(bytes, &e)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
@@ -65,7 +75,7 @@ func ReadAllBu(dir string) ([]BuEntry, error) {
 	return bus, nil
 }
 
-func ProcessAllZips(dir string, process func([]BuEntry) error) {
+func ProcessAllZip(dir string, process func(EntidadeBoletimUrna) error) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
@@ -73,36 +83,13 @@ func ProcessAllZips(dir string, process func([]BuEntry) error) {
 
 	for _, e := range dirEntries {
 		if !e.IsDir() && strings.HasSuffix(e.Name(), ".zip") {
-			err = ProcessZip((strings.Join([]string{dir, e.Name()}, "/")), process)
-			if err != nil {
-				log.Println(err)
-			}
+			ProcessZip((strings.Join([]string{dir, e.Name()}, "/")), process)
 		}
 	}
 }
 
-func ProcessZip(path string, process func([]BuEntry) error) error {
-	tmpPath, err := os.MkdirTemp(".", "tmp-*")
-	if err != nil {
-		return err
-	}
-
-	ExtractZip(path, tmpPath)
-
-	bus, err := ReadAllBu(tmpPath)
-	if err != nil {
-		return err
-	}
-
-	err = process(bus)
-
-	os.RemoveAll(tmpPath)
-
-	return err
-}
-
-func ExtractZip(src string, dst string) {
-	r, err := zip.OpenReader(src)
+func ProcessZip(path string, process func(EntidadeBoletimUrna) error) {
+	r, err := zip.OpenReader(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,23 +97,37 @@ func ExtractZip(src string, dst string) {
 
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, ".bu") {
-			rc, err := f.Open()
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-
-			target, err := os.Create(strings.Join([]string{dst, f.Name}, "/"))
-			io.Copy(target, rc)
-
-			if err != nil {
-				log.Println(err)
-			}
-
-			rc.Close()
-			target.Close()
+			processZipFile(f, process)
 		}
 	}
+}
+
+func processZipFile(f *zip.File, process func(EntidadeBoletimUrna) error) {
+	rc, err := f.Open()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	var buf bytes.Buffer
+	io.Copy(io.Writer(&buf), rc)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	bu, err := readBuFromBytes(buf.Bytes())
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = process(bu)
+	if err != nil {
+		log.Println(err)
+	}
+
+	rc.Close()
 }
 
 func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]map[string]int {
@@ -142,24 +143,38 @@ func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]
 	for _, entry := range buEntries {
 		b, err := entry.ReadBu()
 		if err != nil {
-			log.Println("could not read", entry.path)
+			log.Println("error processing entry", entry)
 		}
+		for cargo, candidato := range ComputeVotosBu(b, cargos) {
+			for candidato, numVotos := range candidato {
+				votosPorCargo[cargo][candidato] = votosPorCargo[cargo][candidato] + numVotos
+			}
+		}
+	}
 
-		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
-			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
-				for _, votoCargo := range votacao.TotaisVotosCargo {
-					for _, votoVotavel := range votoCargo.VotosVotaveis {
-						cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
+	return votosPorCargo
+}
 
-						if slices.Contains(cargos, cc) {
-							switch TipoVoto(votoVotavel.TipoVoto) {
-							case Nominal, Legenda:
-								votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] += votoVotavel.QuantidadeVotos
-							case Branco:
-								votosPorCargo[cc.String()][Branco.String()] += votoVotavel.QuantidadeVotos
-							case Nulo:
-								votosPorCargo[cc.String()][Nulo.String()] += votoVotavel.QuantidadeVotos
-							}
+func ComputeVotosBu(b EntidadeBoletimUrna, cargos []CargoConstitucional) map[string]map[string]int {
+	votosPorCargo := make(map[string]map[string]int)
+	for _, cargo := range cargos {
+		votosPorCargo[cargo.String()] = map[string]int{}
+	}
+
+	for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
+		for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
+			for _, votoCargo := range votacao.TotaisVotosCargo {
+				for _, votoVotavel := range votoCargo.VotosVotaveis {
+					cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
+
+					if slices.Contains(cargos, cc) {
+						switch TipoVoto(votoVotavel.TipoVoto) {
+						case Nominal, Legenda:
+							votosPorCargo[cc.String()][fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)] += votoVotavel.QuantidadeVotos
+						case Branco:
+							votosPorCargo[cc.String()][Branco.String()] += votoVotavel.QuantidadeVotos
+						case Nulo:
+							votosPorCargo[cc.String()][Nulo.String()] += votoVotavel.QuantidadeVotos
 						}
 					}
 				}
@@ -175,20 +190,31 @@ func ValidateVotos(buEntries []BuEntry) error {
 		b, err := entry.ReadBu()
 		if err != nil {
 			log.Println("could not read", entry.path)
+			continue
 		}
 
-		pub := ed25519.PublicKey(b.ChaveAssinaturaVotosVotavel)
-		for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
-			for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
-				for _, votoCargo := range votacao.TotaisVotosCargo {
-					for _, votoVotavel := range votoCargo.VotosVotaveis {
+		err = ValidateVotosBu(b)
+		if err != nil {
+			log.Println(err, b)
+			return err
+		}
+	}
 
-						checksum := sha512.Sum512(
-							buildPayload(votoCargo, votoVotavel, b.Urna.CorrespondenciaResultado.Carga))
-						ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
-						if !ok {
-							return errors.New("error in verification")
-						}
+	return nil
+}
+
+func ValidateVotosBu(b EntidadeBoletimUrna) error {
+	pub := ed25519.PublicKey(b.ChaveAssinaturaVotosVotavel)
+	for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
+		for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
+			for _, votoCargo := range votacao.TotaisVotosCargo {
+				for _, votoVotavel := range votoCargo.VotosVotaveis {
+
+					checksum := sha512.Sum512(
+						buildPayload(votoCargo, votoVotavel, b.Urna.CorrespondenciaResultado.Carga))
+					ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
+					if !ok {
+						return errors.New("error in verification")
 					}
 				}
 			}
