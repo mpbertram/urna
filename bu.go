@@ -82,7 +82,7 @@ func ProcessAllZips(dir string, process func([]BuEntry) error) {
 }
 
 func ProcessZip(path string, process func([]BuEntry) error) error {
-	tmpPath, err := os.MkdirTemp(".", "0755")
+	tmpPath, err := os.MkdirTemp(".", "tmp-*")
 	if err != nil {
 		return err
 	}
@@ -124,6 +124,7 @@ func ExtractZip(src string, dst string) {
 			}
 
 			rc.Close()
+			target.Close()
 		}
 	}
 }
