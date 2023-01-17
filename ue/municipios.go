@@ -1,34 +1,44 @@
 package ue
 
 import (
+	"embed"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 )
 
+//go:embed resource/municipios.csv
+var f embed.FS
+
 type Municipio struct {
-	Id int
+	Id   int
+	Nome string
+	Uf   string
 }
 
-var cache map[int]string = make(map[int]string)
+var cache map[int]Municipio = make(map[int]Municipio)
 
 func (m Municipio) String() string {
-	v, ok := cache[m.Id]
+	return fmt.Sprintf("%s (%s)", m.Nome, m.Uf)
+}
+
+func MunicipioFromId(id int) (Municipio, error) {
+	m, ok := cache[id]
 	if ok {
-		return v
+		return m, nil
 	}
 
-	f, err := os.Open("resource/municipios.csv")
+	municipios, err := f.Open("resource/municipios.csv")
 	if err != nil {
 		log.Println(err)
-		return fmt.Sprint(m.Id)
+		return Municipio{id, "?", "?"}, errors.New("could not process csv")
 	}
-	defer f.Close()
+	defer municipios.Close()
 
-	r := csv.NewReader(f)
+	r := csv.NewReader(municipios)
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -36,21 +46,21 @@ func (m Municipio) String() string {
 		}
 		if err != nil {
 			log.Println(err)
-			return fmt.Sprint(m.Id)
+			return Municipio{id, "?", "?"}, errors.New("could not process csv")
 		}
 
-		id, err := strconv.Atoi(record[0])
+		i, err := strconv.Atoi(record[0])
 		if err != nil {
 			log.Println(err)
-			return fmt.Sprint(m.Id)
+			return Municipio{id, "?", "?"}, errors.New("could not process csv")
 		}
 
-		if id == m.Id {
-			s := fmt.Sprintf("%s (%s)", record[1], record[2])
-			cache[m.Id] = s
-			return s
+		if i == id {
+			mun := Municipio{id, record[1], record[2]}
+			cache[id] = mun
+			return mun, nil
 		}
 	}
 
-	return fmt.Sprint(m.Id)
+	return Municipio{id, "?", "?"}, fmt.Errorf("could not find for id=%d", id)
 }

@@ -5,6 +5,7 @@ package ue
 import (
 	"encoding/asn1"
 	"errors"
+	"strings"
 )
 
 type CodigoMunicipio int              // Código do município fornecido pelo cadastro da Justiça Eleitoral.
@@ -87,6 +88,16 @@ func (cc CargoConstitucional) String() string {
 	}
 
 	return "Cargo Constitucional invalido"
+}
+
+func CargoConstitucionalFromString(s string) CargoConstitucional {
+	for _, cargo := range ValidCargoConstitucional() {
+		if strings.EqualFold(cargo.String(), s) {
+			return cargo
+		}
+	}
+
+	return CargoConstitucionalInvalido
 }
 
 func ValidCargoConstitucional() []CargoConstitucional {
