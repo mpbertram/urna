@@ -1,4 +1,4 @@
-package urna
+package ue
 
 import (
 	"encoding/csv"
