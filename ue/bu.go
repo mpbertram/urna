@@ -130,22 +130,22 @@ func processZipFile(f *zip.File, process func(EntidadeBoletimUrna) error) {
 	rc.Close()
 }
 
-func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]map[string]int {
+func CountVotos(entries []BuEntry, cargos []CargoConstitucional) map[CargoConstitucional]map[string]int {
 	if len(cargos) == 0 {
 		cargos = ValidCargoConstitucional()
 	}
 
-	votosPorCargo := make(map[string]map[string]int)
+	votosPorCargo := make(map[CargoConstitucional]map[string]int)
 	for _, cargo := range cargos {
-		votosPorCargo[cargo.String()] = map[string]int{}
+		votosPorCargo[cargo] = map[string]int{}
 	}
 
-	for _, entry := range buEntries {
+	for _, entry := range entries {
 		b, err := entry.ReadBu()
 		if err != nil {
 			log.Println("error processing entry", entry)
 		}
-		for cargo, candidato := range ComputeVotosBu(b, cargos) {
+		for cargo, candidato := range CountVotosBu(b, cargos) {
 			for candidato, numVotos := range candidato {
 				votosPorCargo[cargo][candidato] = votosPorCargo[cargo][candidato] + numVotos
 			}
@@ -155,27 +155,27 @@ func ComputeVotos(buEntries []BuEntry, cargos []CargoConstitucional) map[string]
 	return votosPorCargo
 }
 
-func ComputeVotosBu(b EntidadeBoletimUrna, cargos []CargoConstitucional) map[string]map[string]int {
-	votosPorCargo := make(map[string]map[string]int)
+func CountVotosBu(b EntidadeBoletimUrna, cargos []CargoConstitucional) map[CargoConstitucional]map[string]int {
+	votosPorCargo := make(map[CargoConstitucional]map[string]int)
 	for _, cargo := range cargos {
-		votosPorCargo[cargo.String()] = map[string]int{}
+		votosPorCargo[cargo] = map[string]int{}
 	}
 
 	for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
 		for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
 			for _, votoCargo := range votacao.TotaisVotosCargo {
 				for _, votoVotavel := range votoCargo.VotosVotaveis {
-					cc, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
+					cargo, _ := CargoConstitucionalFromData(votoCargo.CodigoCargo.Bytes)
 
-					if slices.Contains(cargos, cc) {
+					if slices.Contains(cargos, cargo) {
 						switch TipoVoto(votoVotavel.TipoVoto) {
 						case Nominal, Legenda:
 							candidato := fmt.Sprint(votoVotavel.IdentificacaoVotavel.Codigo)
-							votosPorCargo[cc.String()][candidato] += votoVotavel.QuantidadeVotos
+							votosPorCargo[cargo][candidato] += votoVotavel.QuantidadeVotos
 						case Branco:
-							votosPorCargo[cc.String()][Branco.String()] += votoVotavel.QuantidadeVotos
+							votosPorCargo[cargo][Branco.String()] += votoVotavel.QuantidadeVotos
 						case Nulo:
-							votosPorCargo[cc.String()][Nulo.String()] += votoVotavel.QuantidadeVotos
+							votosPorCargo[cargo][Nulo.String()] += votoVotavel.QuantidadeVotos
 						}
 					}
 				}
@@ -213,11 +213,25 @@ func ValidateVotosBu(b EntidadeBoletimUrna) error {
 
 					payload := buildPayload(votoCargo, votoVotavel, b.Urna.CorrespondenciaResultado.Carga)
 					checksum := sha512.Sum512(payload)
+
 					ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
 					if !ok {
-						log.Println("error in verification", payload)
-						return errors.New("error in verification")
+						return fmt.Errorf(
+							"error in verification; municipio=%s, local=%d, secao=%d, payload=%s",
+							b.IdentificacaoSecao.Municipio(),
+							b.IdentificacaoSecao.Local,
+							b.IdentificacaoSecao.Secao,
+							payload,
+						)
 					}
+
+					log.Printf(
+						"verified; municipio=%s, local=%d, secao=%d, payload=%s",
+						b.IdentificacaoSecao.Municipio(),
+						b.IdentificacaoSecao.Local,
+						b.IdentificacaoSecao.Secao,
+						payload,
+					)
 				}
 			}
 		}

@@ -651,6 +651,11 @@ type IdentificacaoSecaoEleitoral struct {
 	Secao         NumeroSecao   // Número identificador da <glossario id='secao-eleitoral'>seção eleitoral</glossario>.
 }
 
+func (id IdentificacaoSecaoEleitoral) Municipio() Municipio {
+	m, _ := MunicipioFromId(int(id.MunicipioZona.Municipio))
+	return m
+}
+
 // Identificação de um votável que pode ser um candidato ou uma pergunta de consulta popular.
 type IdentificacaoVotavel struct {
 	Partido NumeroPartido // Número do partido.

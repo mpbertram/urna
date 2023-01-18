@@ -6,14 +6,14 @@ import (
 )
 
 func TestZip(t *testing.T) {
-	all := make(map[string]map[string]int)
+	all := make(map[CargoConstitucional]map[string]int)
 	ProcessAllZip("test-data", func(bu EntidadeBoletimUrna) error {
 		err := ValidateVotosBu(bu)
 		if err != nil {
 			t.Error(err)
 		}
 
-		votos := ComputeVotosBu(bu, []CargoConstitucional{Presidente})
+		votos := CountVotosBu(bu, []CargoConstitucional{Presidente})
 		for cargo, candidato := range votos {
 			if all[cargo] == nil {
 				all[cargo] = candidato
@@ -25,8 +25,8 @@ func TestZip(t *testing.T) {
 		}
 		return nil
 	})
-	if all[Presidente.String()][Nulo.String()] != 6 {
-		t.Errorf("Wrong count for Nulo (%d)", all[Presidente.String()][Nulo.String()])
+	if all[Presidente][Nulo.String()] != 6 {
+		t.Errorf("Wrong count for Nulo (%d)", all[Presidente][Nulo.String()])
 	}
 }
 
@@ -46,9 +46,9 @@ func TestBu(t *testing.T) {
 		t.Error(err)
 	}
 
-	v := ComputeVotos(bus, []CargoConstitucional{Presidente})
-	if v[Presidente.String()][Nulo.String()] != 6 {
-		t.Errorf("wrong count for Nulo (%d)", v[Presidente.String()][Nulo.String()])
+	v := CountVotos(bus, []CargoConstitucional{Presidente})
+	if v[Presidente][Nulo.String()] != 6 {
+		t.Errorf("wrong count for Nulo (%d)", v[Presidente][Nulo.String()])
 	}
 
 	d, err := bu.ReadDadosSecaoSA()
