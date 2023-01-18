@@ -30,18 +30,25 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 
 func VerifyAssinaturas(dir string) {
 	ProcessAllZip(dir, func(e EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
-		verifyEntidadeAssinatura(ctx.ZipFile, e.AssinaturaHW)
-		verifyEntidadeAssinatura(ctx.ZipFile, e.AssinaturaSW)
+		verifyEntidadeAssinatura(ctx, e.AssinaturaHW)
+		verifyEntidadeAssinatura(ctx, e.AssinaturaSW)
 	})
 }
 
-func verifyEntidadeAssinatura(path string, a EntidadeAssinatura) {
+func verifyEntidadeAssinatura(ctx ZipProcessCtx, a EntidadeAssinatura) {
 	as, err := a.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ProcessZipRaw(path, func(f *zip.File) {
+	checksum := sha512.Sum512(a.ConteudoAutoAssinado)
+	if !slices.Equal(checksum[:], a.AutoAssinado.Assinatura.Hash) {
+		log.Fatalf("hash check failed for auto content of %s", ctx.Filename)
+	} else {
+		log.Printf("hash check successful for auto content of %s", ctx.Filename)
+	}
+
+	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) {
 		for _, a := range as.ArquivosAssinados {
 			if strings.EqualFold(f.Name, a.NomeArquivo) {
 				rc, err := f.Open()

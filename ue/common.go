@@ -60,7 +60,8 @@ func FillSequence(bytes []byte, form any) error {
 }
 
 type ZipProcessCtx struct {
-	ZipFile string
+	ZipFilename string
+	Filename    string
 }
 
 func ProcessAllZipRaw(dir string, process func(*zip.File)) {
@@ -147,7 +148,7 @@ func ProcessZip(path string, process any) {
 					reflect.ValueOf(process).Call(
 						[]reflect.Value{
 							entity.Elem(),
-							reflect.ValueOf(ZipProcessCtx{path}),
+							reflect.ValueOf(ZipProcessCtx{path, f.Name}),
 						},
 					)
 				}
