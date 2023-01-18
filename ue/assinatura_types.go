@@ -48,6 +48,19 @@ type EntidadeAssinatura struct {
 	ConjuntoChave        string                `asn1:"optional"` // Identificador do conjunto de chaves usado para assinar o pacote.
 }
 
+func (e EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
+	var a Assinatura
+	_, err := asn1.Unmarshal(e.ConteudoAutoAssinado, &a)
+	if err != nil {
+		return Assinatura{}, err
+	}
+	return a, nil
+}
+
+func (e EntidadeAssinatura) Extension() string {
+	return ".vscmr"
+}
+
 // Entidade responsável por gerar o arquivo de assinatura de todos os arquivos de resultados da urna.
 // Podendo ter dois tipos de assinatura (Hardware (HW) e Software (SW)).
 // Esses arquivos são informados na Mídia de Resultado quando a urna eletrônica é encerrada.

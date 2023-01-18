@@ -71,7 +71,12 @@ func toCsv() {
 	}
 	w.Flush()
 
-	urna.ProcessAllZip(folder, func(bu urna.EntidadeBoletimUrna) error {
+	urna.ProcessAllZip(folder, func(eeg urna.EntidadeEnvelopeGenerico) error {
+		bu, err := eeg.ReadBu()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		votos := urna.CountVotosBu(bu, []urna.CargoConstitucional{cargo})
 		var votosForCandidato []string
 		for _, candidato := range candidatos {
@@ -103,7 +108,11 @@ func count() {
 	cargos := []urna.CargoConstitucional{urna.CargoConstitucionalFromString(cargo)}
 	votos := urna.CountVotos(bus, cargos)
 
-	urna.ProcessAllZip(folder, func(ebu urna.EntidadeBoletimUrna) error {
+	urna.ProcessAllZip(folder, func(eeg urna.EntidadeEnvelopeGenerico) error {
+		ebu, err := eeg.ReadBu()
+		if err != nil {
+			log.Fatal(err)
+		}
 		for cargo, candidato := range urna.CountVotosBu(ebu, cargos) {
 			if votos[cargo] == nil {
 				votos[cargo] = candidato
@@ -130,7 +139,12 @@ func verify() {
 		log.Fatal(err)
 	}
 
-	urna.ProcessAllZip(folder, func(ebu urna.EntidadeBoletimUrna) error {
+	urna.ProcessAllZip(folder, func(eeg urna.EntidadeEnvelopeGenerico) error {
+		ebu, err := eeg.ReadBu()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		err = urna.ValidateVotosBu(ebu)
 		if err != nil {
 			log.Fatal(err)
@@ -138,8 +152,6 @@ func verify() {
 
 		return nil
 	})
-
-	log.Println("validation successful")
 }
 
 func countFlags() {

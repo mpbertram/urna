@@ -2,15 +2,25 @@ package ue
 
 import (
 	"crypto/x509"
+	"log"
 	"testing"
 )
 
 func TestAssinatura(t *testing.T) {
-	a, err := ReadAssinatura("test-data/urna.vscmr")
+	vscmr, err := ReadAssinatura("test-data/urna.vscmr")
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = x509.ParseCertificate(a.AssinaturaHW.CertificadoDigital)
+
+	as, err := vscmr.AssinaturaHW.ReadConteudoAutoAssinado()
+	if err != nil {
+		t.Error(err)
+	}
+	for _, a := range as.ArquivosAssinados {
+		log.Println(a.NomeArquivo)
+	}
+
+	_, err = x509.ParseCertificate(vscmr.AssinaturaHW.CertificadoDigital)
 	if err != nil {
 		t.Error(err)
 	}

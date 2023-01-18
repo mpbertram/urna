@@ -1,14 +1,10 @@
 package ue
 
 import (
-	"archive/zip"
-	"bytes"
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/asn1"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -42,17 +38,7 @@ func readBuFromBytes(bytes []byte) (EntidadeBoletimUrna, error) {
 		return EntidadeBoletimUrna{}, err
 	}
 
-	if TipoEnvelope(e.TipoEnvelope) != EnvelopeBoletimUrna {
-		return EntidadeBoletimUrna{}, errors.New("envelope is not a bu")
-	}
-
-	var b EntidadeBoletimUrna
-	_, err = asn1.Unmarshal(e.Conteudo, &b)
-	if err != nil {
-		return EntidadeBoletimUrna{}, err
-	}
-
-	return b, nil
+	return e.ReadBu()
 }
 
 func ReadAllBu(dir string) ([]BuEntry, error) {
@@ -73,61 +59,6 @@ func ReadAllBu(dir string) ([]BuEntry, error) {
 	}
 
 	return bus, nil
-}
-
-func ProcessAllZip(dir string, process func(EntidadeBoletimUrna) error) {
-	dirEntries, err := os.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, e := range dirEntries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".zip") {
-			ProcessZip((strings.Join([]string{dir, e.Name()}, "/")), process)
-		}
-	}
-}
-
-func ProcessZip(path string, process func(EntidadeBoletimUrna) error) {
-	r, err := zip.OpenReader(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		if strings.HasSuffix(f.Name, ".bu") {
-			processZipFile(f, process)
-		}
-	}
-}
-
-func processZipFile(f *zip.File, process func(EntidadeBoletimUrna) error) {
-	rc, err := f.Open()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	var buf bytes.Buffer
-	io.Copy(io.Writer(&buf), rc)
-
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	bu, err := readBuFromBytes(buf.Bytes())
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = process(bu)
-	if err != nil {
-		log.Println(err)
-	}
-
-	rc.Close()
 }
 
 func CountVotos(entries []BuEntry, cargos []CargoConstitucional) map[CargoConstitucional]map[string]int {

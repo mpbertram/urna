@@ -507,6 +507,24 @@ type EntidadeEnvelopeGenerico struct {
 	Conteudo      []byte            // Conteúdo do envelope gerado.
 }
 
+func (eeg EntidadeEnvelopeGenerico) ReadBu() (EntidadeBoletimUrna, error) {
+	if TipoEnvelope(eeg.TipoEnvelope) != EnvelopeBoletimUrna {
+		return EntidadeBoletimUrna{}, errors.New("envelope is not a bu")
+	}
+
+	var ebu EntidadeBoletimUrna
+	_, err := asn1.Unmarshal(eeg.Conteudo, &ebu)
+	if err != nil {
+		return EntidadeBoletimUrna{}, err
+	}
+
+	return ebu, nil
+}
+
+func (eeg EntidadeEnvelopeGenerico) Extension() string {
+	return ".bu"
+}
+
 // Identificador com informações de segurança solicitados pela biblioteca do CEPESC.
 type Seguranca struct {
 	IdTipoArquivo  int    // Identificador que corresponde ao arquivo solicitado pela biblioteca do CEPESC.

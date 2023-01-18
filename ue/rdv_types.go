@@ -76,6 +76,10 @@ func (rdv EntidadeRegistroDigitalVoto) ReadEleicoes() (interface{}, error) {
 	return nil, errors.New("could not read dados secao/SA")
 }
 
+func (e EntidadeResultadoRDV) Extension() string {
+	return ".rdv"
+}
+
 // Votos para todos os cargos de uma eleição.
 type EleicaoVota struct {
 	IdEleicao   int          // Identificador da eleição.

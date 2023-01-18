@@ -7,8 +7,13 @@ import (
 
 func TestZip(t *testing.T) {
 	all := make(map[CargoConstitucional]map[string]int)
-	ProcessAllZip("test-data", func(bu EntidadeBoletimUrna) error {
-		err := ValidateVotosBu(bu)
+	ProcessAllZip("test-data", func(eeg EntidadeEnvelopeGenerico) error {
+		bu, err := eeg.ReadBu()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = ValidateVotosBu(bu)
 		if err != nil {
 			t.Error(err)
 		}
