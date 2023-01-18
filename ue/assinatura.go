@@ -29,20 +29,20 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 }
 
 func VerifyAssinaturas(dir string) {
-	ProcessAllZip(dir, func(e EntidadeAssinaturaResultado) {
-		verifyEntidadeAssinatura(dir, e.AssinaturaHW)
-		verifyEntidadeAssinatura(dir, e.AssinaturaSW)
+	ProcessAllZip(dir, func(e EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
+		verifyEntidadeAssinatura(ctx.ZipFile, e.AssinaturaHW)
+		verifyEntidadeAssinatura(ctx.ZipFile, e.AssinaturaSW)
 	})
 }
 
-func verifyEntidadeAssinatura(dir string, a EntidadeAssinatura) {
+func verifyEntidadeAssinatura(path string, a EntidadeAssinatura) {
 	as, err := a.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, a := range as.ArquivosAssinados {
-		ProcessAllZipRaw(dir, func(f *zip.File) {
+	ProcessZipRaw(path, func(f *zip.File) {
+		for _, a := range as.ArquivosAssinados {
 			if strings.EqualFold(f.Name, a.NomeArquivo) {
 				rc, err := f.Open()
 				if err != nil {
@@ -61,6 +61,6 @@ func verifyEntidadeAssinatura(dir string, a EntidadeAssinatura) {
 
 				rc.Close()
 			}
-		})
-	}
+		}
+	})
 }

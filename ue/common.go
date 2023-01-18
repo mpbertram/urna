@@ -59,6 +59,10 @@ func FillSequence(bytes []byte, form any) error {
 	return nil
 }
 
+type ZipProcessCtx struct {
+	ZipFile string
+}
+
 func ProcessAllZipRaw(dir string, process func(*zip.File)) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
@@ -115,38 +119,47 @@ func ProcessZip(path string, process any) {
 
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, extension.String()) {
-			processZipFile(f, process)
+			rc, err := f.Open()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			var buf bytes.Buffer
+			io.Copy(io.Writer(&buf), rc)
+
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			functionType := reflect.TypeOf(process)
+			entityType := functionType.In(0)
+			entity := reflect.New(entityType)
+			_, err = asn1.Unmarshal(buf.Bytes(), entity.Interface())
+			if err != nil {
+				log.Println(err)
+			}
+
+			if functionType.NumIn() > 1 {
+				ctx := functionType.In(1)
+				if ctx == reflect.TypeOf(ZipProcessCtx{}) {
+					reflect.ValueOf(process).Call(
+						[]reflect.Value{
+							entity.Elem(),
+							reflect.ValueOf(ZipProcessCtx{path}),
+						},
+					)
+				}
+			} else {
+				reflect.ValueOf(process).Call([]reflect.Value{entity.Elem()})
+			}
+
+			if err != nil {
+				log.Println(err)
+			}
+
+			rc.Close()
 		}
 	}
-}
-
-func processZipFile(f *zip.File, process any) {
-	rc, err := f.Open()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	var buf bytes.Buffer
-	io.Copy(io.Writer(&buf), rc)
-
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	entityType := reflect.TypeOf(process).In(0)
-	entity := reflect.New(entityType)
-	_, err = asn1.Unmarshal(buf.Bytes(), entity.Interface())
-	if err != nil {
-		log.Println(err)
-	}
-
-	reflect.ValueOf(process).Call([]reflect.Value{entity.Elem()})
-
-	if err != nil {
-		log.Println(err)
-	}
-
-	rc.Close()
 }
