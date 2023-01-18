@@ -57,10 +57,6 @@ func (e EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
 	return a, nil
 }
 
-func (e EntidadeAssinatura) Extension() string {
-	return ".vscmr"
-}
-
 // Entidade responsável por gerar o arquivo de assinatura de todos os arquivos de resultados da urna.
 // Podendo ter dois tipos de assinatura (Hardware (HW) e Software (SW)).
 // Esses arquivos são informados na Mídia de Resultado quando a urna eletrônica é encerrada.
@@ -68,6 +64,10 @@ type EntidadeAssinaturaResultado struct {
 	ModeloUrna   asn1.Enumerated    // Modelo da urna eletrônica.
 	AssinaturaSW EntidadeAssinatura // Assinatura realizada via software (normalmente CEPESC).
 	AssinaturaHW EntidadeAssinatura // Assinatura realizada via hardware de segurança da urna eletrônica.
+}
+
+func (e EntidadeAssinaturaResultado) Extension() string {
+	return ".vscmr"
 }
 
 // Demais SEQUENCES

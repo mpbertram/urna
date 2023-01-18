@@ -59,6 +59,19 @@ func FillSequence(bytes []byte, form any) error {
 	return nil
 }
 
+func ProcessAllZipRaw(dir string, process func(*zip.File)) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, e := range dirEntries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".zip") {
+			ProcessZipRaw((strings.Join([]string{dir, e.Name()}, "/")), process)
+		}
+	}
+}
+
 func ProcessAllZip(dir string, process any) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
@@ -72,6 +85,18 @@ func ProcessAllZip(dir string, process any) {
 	}
 }
 
+func ProcessZipRaw(path string, process func(*zip.File)) {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		process(f)
+	}
+}
+
 func ProcessZip(path string, process any) {
 	r, err := zip.OpenReader(path)
 	if err != nil {
@@ -81,7 +106,12 @@ func ProcessZip(path string, process any) {
 
 	entityType := reflect.TypeOf(process).In(0)
 	entity := reflect.New(entityType)
-	extension := entity.MethodByName("Extension").Call([]reflect.Value{})[0]
+
+	extensionMethod := entity.MethodByName("Extension")
+	if !extensionMethod.IsValid() {
+		log.Fatal("type of process function argument does not define Extension()")
+	}
+	extension := extensionMethod.Call([]reflect.Value{})[0]
 
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, extension.String()) {

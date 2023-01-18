@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func TestAssinaturaZip(t *testing.T) {
+	VerifyAssinaturas("test-data/signature")
+}
+
 func TestAssinatura(t *testing.T) {
 	vscmr, err := ReadAssinatura("test-data/urna.vscmr")
 	if err != nil {
