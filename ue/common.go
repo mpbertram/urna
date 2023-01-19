@@ -60,8 +60,8 @@ func FillSequence(bytes []byte, form any) error {
 }
 
 type ZipProcessCtx struct {
-	ZipFilename string
-	Filename    string
+	ZipFilename string // name of the `*.zip` file
+	Filename    string // name of the file inside the `*.zip` file
 }
 
 func ProcessAllZipRaw(dir string, process func(*zip.File)) {

@@ -2,7 +2,11 @@
 
 package ue
 
-import "encoding/asn1"
+import (
+	"crypto/x509"
+	"encoding/asn1"
+	"errors"
+)
 
 // ENUMS
 // Tipos de algoritmos de assinatura (cepesc é o algoritmo padrão (ainda não há previsão de uso dos demais)).
@@ -55,6 +59,59 @@ func (e EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
 		return Assinatura{}, err
 	}
 	return a, nil
+}
+
+func (e EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
+	cert, err := x509.ParseCertificate(e.CertificadoDigital)
+	if err != nil {
+		return &x509.Certificate{}, err
+	}
+
+	return cert, nil
+}
+
+func (a EntidadeAssinatura) VerifyAutoSignature() error {
+	if len(a.CertificadoDigital) == 0 {
+		return errors.New("no certificate")
+	}
+
+	cert, err := a.ParseCertificate()
+	if err != nil {
+		return err
+	}
+
+	err = cert.CheckSignature(
+		cert.SignatureAlgorithm,
+		a.AutoAssinado.Assinatura.Hash,
+		a.AutoAssinado.Assinatura.Assinatura,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a EntidadeAssinatura) VerifySignature(arq AssinaturaArquivo) error {
+	if len(a.CertificadoDigital) == 0 {
+		return errors.New("no certificate")
+	}
+
+	cert, err := a.ParseCertificate()
+	if err != nil {
+		return err
+	}
+
+	err = cert.CheckSignature(
+		cert.SignatureAlgorithm,
+		arq.Assinatura.Hash,
+		arq.Assinatura.Assinatura,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Entidade responsável por gerar o arquivo de assinatura de todos os arquivos de resultados da urna.

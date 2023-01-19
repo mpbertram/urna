@@ -35,22 +35,31 @@ func VerifyAssinaturas(dir string) {
 	})
 }
 
-func verifyEntidadeAssinatura(ctx ZipProcessCtx, a EntidadeAssinatura) {
-	as, err := a.ReadConteudoAutoAssinado()
+func verifyEntidadeAssinatura(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
+	arquivosAssinados, err := assinatura.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	checksum := sha512.Sum512(a.ConteudoAutoAssinado)
-	if !slices.Equal(checksum[:], a.AutoAssinado.Assinatura.Hash) {
-		log.Fatalf("hash check failed for auto content of %s", ctx.Filename)
+	checksum := sha512.Sum512(assinatura.ConteudoAutoAssinado)
+	if !slices.Equal(checksum[:], assinatura.AutoAssinado.Assinatura.Hash) {
+		log.Printf("hash check failed for auto content of %s", ctx.Filename)
 	} else {
 		log.Printf("hash check successful for auto content of %s", ctx.Filename)
 	}
 
+	err = assinatura.VerifyAutoSignature()
+	if err != nil {
+		if !strings.EqualFold(err.Error(), "no certificate") {
+			log.Printf("signature check failed for auto content of %s", ctx.Filename)
+		}
+	} else {
+		log.Printf("signature check successful for auto content of %s", ctx.Filename)
+	}
+
 	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) {
-		for _, a := range as.ArquivosAssinados {
-			if strings.EqualFold(f.Name, a.NomeArquivo) {
+		for _, arquivo := range arquivosAssinados.ArquivosAssinados {
+			if strings.EqualFold(f.Name, arquivo.NomeArquivo) {
 				rc, err := f.Open()
 				if err != nil {
 					log.Fatal(err)
@@ -60,10 +69,19 @@ func verifyEntidadeAssinatura(ctx ZipProcessCtx, a EntidadeAssinatura) {
 				io.Copy(&buf, rc)
 
 				checksum := sha512.Sum512(buf.Bytes())
-				if !slices.Equal(checksum[:], a.Assinatura.Hash) {
-					log.Fatalf("hash check failed for file %s", a.NomeArquivo)
+				if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
+					log.Printf("hash check failed for file %s", arquivo.NomeArquivo)
 				} else {
-					log.Printf("hash check successful for %s", a.NomeArquivo)
+					log.Printf("hash check successful for %s", arquivo.NomeArquivo)
+				}
+
+				err = assinatura.VerifySignature(arquivo)
+				if err != nil {
+					if !strings.EqualFold(err.Error(), "no certificate") {
+						log.Printf("signature check failed for %s", arquivo.NomeArquivo)
+					}
+				} else {
+					log.Printf("signature check successful for %s", arquivo.NomeArquivo)
 				}
 
 				rc.Close()

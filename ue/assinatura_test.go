@@ -1,7 +1,6 @@
 package ue
 
 import (
-	"crypto/x509"
 	"log"
 	"testing"
 )
@@ -24,7 +23,7 @@ func TestAssinatura(t *testing.T) {
 		log.Println(a.NomeArquivo)
 	}
 
-	_, err = x509.ParseCertificate(vscmr.AssinaturaHW.CertificadoDigital)
+	_, err = vscmr.AssinaturaHW.ParseCertificate()
 	if err != nil {
 		t.Error(err)
 	}
