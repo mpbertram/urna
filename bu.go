@@ -12,7 +12,11 @@ import (
 )
 
 func Bu() {
-	var function = os.Args[2]
+	var function string
+	if len(os.Args) > 2 {
+		function = os.Args[2]
+	}
+
 	switch function {
 	case "count":
 		countBuFlags()
@@ -24,7 +28,8 @@ func Bu() {
 		csvBuFlags()
 		buToCsv()
 	default:
-		log.Fatalf("function %s is invalid", function)
+		fmt.Println("usage: urna bu <count|verify|csv> <options>")
+		fmt.Printf("provided function '%s' is none of (count, verify, csv)\n", function)
 	}
 }
 
@@ -150,23 +155,57 @@ func verifyBu() {
 
 func countBuFlags() {
 	countFlags := flag.NewFlagSet("count", flag.ContinueOnError)
-	countFlags.StringVar(&cargo, "cargo", "Presidente", "<Presidente|Governador>")
-	countFlags.StringVar(&folder, "folder", ".", "<folder>")
-	countFlags.Parse(os.Args[3:])
+	countFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
+	countFlags.StringVar(&folder, "folder", "", "folder to search for *.bu files")
+
+	err := countFlags.Parse(os.Args[3:])
+	if err != nil {
+		fmt.Println("usage: urna bu count -folder <folder> -cargo <cargo>")
+		countFlags.PrintDefaults()
+		os.Exit(1)
+	}
+
+	if len(cargo) == 0 || len(folder) == 0 {
+		fmt.Println("usage: urna bu count -folder <folder> -cargo <cargo>")
+		countFlags.PrintDefaults()
+		os.Exit(1)
+	}
 }
 
 func verifyBuFlags() {
 	verifyFlags := flag.NewFlagSet("verify", flag.ContinueOnError)
-	verifyFlags.StringVar(&folder, "folder", ".", "<folder>")
-	verifyFlags.Parse(os.Args[3:])
+	verifyFlags.StringVar(&folder, "folder", ".", "folder to search for *.bu files")
+	err := verifyFlags.Parse(os.Args[3:])
+	if err != nil {
+		fmt.Println("usage: urna bu verify -folder <folder>")
+		verifyFlags.PrintDefaults()
+		os.Exit(1)
+	}
+
+	if len(folder) == 0 {
+		fmt.Println("usage: urna bu verify -folder <folder>")
+		verifyFlags.PrintDefaults()
+		os.Exit(1)
+	}
 }
 
 func csvBuFlags() {
 	csvFlags := flag.NewFlagSet("csv", flag.ContinueOnError)
-	csvFlags.StringVar(&cargo, "cargo", "Presidente", "<Presidente|Governador>")
-	csvFlags.StringVar(&candidatos, "candidatos", "", "e.g. 'Branco,Nulo,99'")
-	csvFlags.StringVar(&folder, "folder", ".", "<folder>")
-	csvFlags.Parse(os.Args[3:])
+	csvFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
+	csvFlags.StringVar(&candidatos, "candidatos", "", "Comma-separated list; e.g. 'Branco,Nulo,99'")
+	csvFlags.StringVar(&folder, "folder", ".", "Folder to search for *.bu files")
+	err := csvFlags.Parse(os.Args[3:])
+	if err != nil {
+		fmt.Println("usage: urna bu csv -cargo <cargo> -candidatos <candidatos> -folder <folder>")
+		csvFlags.PrintDefaults()
+		os.Exit(1)
+	}
+
+	if len(cargo) == 0 || len(folder) == 0 || len(candidatos) == 0 {
+		fmt.Println("usage: urna bu csv -cargo <cargo> -candidatos <candidatos> -folder <folder>")
+		csvFlags.PrintDefaults()
+		os.Exit(1)
+	}
 }
 
 func splitCandidatosIntoSlice() []string {

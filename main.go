@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 )
 
@@ -10,7 +10,10 @@ var candidatos string
 var folder string
 
 func main() {
-	module := os.Args[1]
+	var module string
+	if len(os.Args) > 1 {
+		module = os.Args[1]
+	}
 
 	switch module {
 	case "bu":
@@ -18,6 +21,7 @@ func main() {
 	case "vscmr":
 		Vscmr()
 	default:
-		log.Fatalf("module %s is invalid", module)
+		fmt.Println("usage: urna <bu|vscmr> <function> <options>")
+		fmt.Printf("provided module '%s' is none of (bu, vscmr)\n", module)
 	}
 }
