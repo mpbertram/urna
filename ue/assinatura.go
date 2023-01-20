@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/asn1"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -28,17 +29,28 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 	return a, nil
 }
 
-func VerifyAssinaturaVscmr(path string) {
+type VerificationResult struct {
+	Ok  bool
+	Msg string
+}
+
+func VerifyAssinaturaVscmr(path string) []VerificationResult {
 	a, err := ReadAssinatura(path)
 	if err != nil {
 		log.Printf("error processing %s", path)
 	}
 
-	verifyAssinaturaVscmr(path, a.AssinaturaHW)
-	verifyAssinaturaVscmr(path, a.AssinaturaSW)
+	var results []VerificationResult
+
+	results = append(results, verifyAssinaturaVscmr(path, a.AssinaturaHW)...)
+	results = append(results, verifyAssinaturaVscmr(path, a.AssinaturaSW)...)
+
+	return results
 }
 
-func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) {
+func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResult {
+	var results []VerificationResult
+
 	conteudoAssinado, err := a.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Println(err)
@@ -46,18 +58,30 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) {
 
 	checksum := sha512.Sum512(a.ConteudoAutoAssinado)
 	if !slices.Equal(checksum[:], a.AutoAssinado.Assinatura.Hash) {
-		log.Printf("hash check failed for auto content of %s", path)
+		results = append(results, VerificationResult{
+			Ok:  false,
+			Msg: fmt.Sprintf("hash check failed for auto content of %s", path),
+		})
 	} else {
-		log.Printf("hash check successful for auto content of %s", path)
+		results = append(results, VerificationResult{
+			Ok:  true,
+			Msg: fmt.Sprintf("hash check successful for auto content of %s", path),
+		})
 	}
 
 	err = a.VerifyAutoSignature()
 	if err != nil {
 		if err.Error() != "no certificate" {
-			log.Printf("signature check failed for auto content of %s", path)
+			results = append(results, VerificationResult{
+				Ok:  false,
+				Msg: fmt.Sprintf("signature check failed for auto content of %s", path),
+			})
 		}
 	} else {
-		log.Printf("signature check successful for auto content of %s", path)
+		results = append(results, VerificationResult{
+			Ok:  true,
+			Msg: fmt.Sprintf("signature check successful for auto content of %s", path),
+		})
 	}
 
 	for _, arquivo := range conteudoAssinado.ArquivosAssinados {
@@ -68,30 +92,50 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) {
 
 		checksum := sha512.Sum512(file)
 		if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
-			log.Printf("hash check failed for file %s", arquivo.NomeArquivo)
+			results = append(results, VerificationResult{
+				Ok:  false,
+				Msg: fmt.Sprintf("hash check failed for file %s", arquivo.NomeArquivo),
+			})
 		} else {
-			log.Printf("hash check successful for %s", arquivo.NomeArquivo)
+			results = append(results, VerificationResult{
+				Ok:  true,
+				Msg: fmt.Sprintf("hash check successful for file %s", arquivo.NomeArquivo),
+			})
 		}
 
 		err = a.VerifySignature(arquivo)
 		if err != nil {
 			if err.Error() != "no certificate" {
-				log.Printf("signature check failed for %s", arquivo.NomeArquivo)
+				results = append(results, VerificationResult{
+					Ok:  false,
+					Msg: fmt.Sprintf("signature check failed for %s", arquivo.NomeArquivo),
+				})
 			}
 		} else {
-			log.Printf("signature check successful for %s", arquivo.NomeArquivo)
+			results = append(results, VerificationResult{
+				Ok:  true,
+				Msg: fmt.Sprintf("signature check successful for %s", arquivo.NomeArquivo),
+			})
 		}
 	}
+
+	return results
 }
 
-func VerifyAssinaturaZip(path string) {
+func VerifyAssinaturaZip(path string) []VerificationResult {
+	var results []VerificationResult
+
 	ProcessZip(path, func(e EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
-		verifyAssinaturaZip(ctx, e.AssinaturaHW)
-		verifyAssinaturaZip(ctx, e.AssinaturaSW)
+		results = append(results, verifyAssinaturaZip(ctx, e.AssinaturaHW)...)
+		results = append(results, verifyAssinaturaZip(ctx, e.AssinaturaSW)...)
 	})
+
+	return results
 }
 
-func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
+func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []VerificationResult {
+	var results []VerificationResult
+
 	arquivosAssinados, err := assinatura.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Fatal(err)
@@ -99,18 +143,30 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
 
 	checksum := sha512.Sum512(assinatura.ConteudoAutoAssinado)
 	if !slices.Equal(checksum[:], assinatura.AutoAssinado.Assinatura.Hash) {
-		log.Printf("hash check failed for auto content of %s", ctx.Filename)
+		results = append(results, VerificationResult{
+			Ok:  false,
+			Msg: fmt.Sprintf("hash check failed for auto content of %s", ctx.Filename),
+		})
 	} else {
-		log.Printf("hash check successful for auto content of %s", ctx.Filename)
+		results = append(results, VerificationResult{
+			Ok:  true,
+			Msg: fmt.Sprintf("hash check successful for auto content of %s", ctx.Filename),
+		})
 	}
 
 	err = assinatura.VerifyAutoSignature()
 	if err != nil {
 		if err.Error() != "no certificate" {
-			log.Printf("signature check failed for auto content of %s", ctx.Filename)
+			results = append(results, VerificationResult{
+				Ok:  false,
+				Msg: fmt.Sprintf("signature check failed for auto content of %s", ctx.Filename),
+			})
 		}
 	} else {
-		log.Printf("signature check successful for auto content of %s", ctx.Filename)
+		results = append(results, VerificationResult{
+			Ok:  true,
+			Msg: fmt.Sprintf("signature check successful for auto content of %s", ctx.Filename),
+		})
 	}
 
 	var count int
@@ -127,18 +183,30 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
 
 				checksum := sha512.Sum512(buf.Bytes())
 				if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
-					log.Printf("hash check failed for file %s", arquivo.NomeArquivo)
+					results = append(results, VerificationResult{
+						Ok:  false,
+						Msg: fmt.Sprintf("hash check failed for %s", arquivo.NomeArquivo),
+					})
 				} else {
-					log.Printf("hash check successful for %s", arquivo.NomeArquivo)
+					results = append(results, VerificationResult{
+						Ok:  true,
+						Msg: fmt.Sprintf("hash check successful for %s", arquivo.NomeArquivo),
+					})
 				}
 
 				err = assinatura.VerifySignature(arquivo)
 				if err != nil {
 					if err.Error() != "no certificate" {
-						log.Printf("signature check failed for %s", arquivo.NomeArquivo)
+						results = append(results, VerificationResult{
+							Ok:  false,
+							Msg: fmt.Sprintf("signature check failed for %s", arquivo.NomeArquivo),
+						})
 					}
 				} else {
-					log.Printf("signature check successful for %s", arquivo.NomeArquivo)
+					results = append(results, VerificationResult{
+						Ok:  true,
+						Msg: fmt.Sprintf("signature check successful for %s", arquivo.NomeArquivo),
+					})
 				}
 
 				count++
@@ -153,4 +221,6 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
 
 		return false
 	})
+
+	return results
 }

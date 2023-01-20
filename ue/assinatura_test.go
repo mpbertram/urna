@@ -1,7 +1,6 @@
 package ue
 
 import (
-	"log"
 	"testing"
 )
 
@@ -15,12 +14,9 @@ func TestAssinatura(t *testing.T) {
 		t.Error(err)
 	}
 
-	as, err := vscmr.AssinaturaHW.ReadConteudoAutoAssinado()
+	_, err = vscmr.AssinaturaHW.ReadConteudoAutoAssinado()
 	if err != nil {
 		t.Error(err)
-	}
-	for _, a := range as.ArquivosAssinados {
-		log.Println(a.NomeArquivo)
 	}
 
 	_, err = vscmr.AssinaturaHW.ParseCertificate()

@@ -13,9 +13,11 @@ func TestZip(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = ValidateVotosBu(bu)
-		if err != nil {
-			t.Error(err)
+		results := ValidateVotosBu(bu)
+		for _, r := range results {
+			if !r.Ok {
+				t.Error(r.Msg)
+			}
 		}
 
 		votos := CountVotosBu(bu, []CargoConstitucional{Presidente})
@@ -46,9 +48,11 @@ func TestBu(t *testing.T) {
 		t.Error("could not read BU", err)
 	}
 
-	err = ValidateVotos(bus)
-	if err != nil {
-		t.Error(err)
+	result := ValidateVotosBu(bu)
+	for _, r := range result {
+		if !r.Ok {
+			t.Error(r.Msg)
+		}
 	}
 
 	v := CountVotos(bus, []CargoConstitucional{Presidente})

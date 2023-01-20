@@ -117,25 +117,9 @@ func CountVotosBu(b EntidadeBoletimUrna, cargos []CargoConstitucional) map[Cargo
 	return votosPorCargo
 }
 
-func ValidateVotos(buEntries []BuEntry) error {
-	for _, entry := range buEntries {
-		b, err := entry.ReadBu()
-		if err != nil {
-			log.Println("could not read", entry.Path)
-			continue
-		}
+func ValidateVotosBu(b EntidadeBoletimUrna) []VerificationResult {
+	var results []VerificationResult
 
-		err = ValidateVotosBu(b)
-		if err != nil {
-			log.Println(err, b)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func ValidateVotosBu(b EntidadeBoletimUrna) error {
 	pub := ed25519.PublicKey(b.ChaveAssinaturaVotosVotavel)
 	for _, votacaoPorEleicao := range b.ResultadosVotacaoPorEleicao {
 		for _, votacao := range votacaoPorEleicao.ResultadosVotacao {
@@ -147,28 +131,34 @@ func ValidateVotosBu(b EntidadeBoletimUrna) error {
 
 					ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
 					if !ok {
-						return fmt.Errorf(
-							"error in verification; municipio=%s, local=%d, secao=%d, payload=%s",
-							b.IdentificacaoSecao.Municipio(),
-							b.IdentificacaoSecao.Local,
-							b.IdentificacaoSecao.Secao,
-							payload,
-						)
+						results = append(results, VerificationResult{
+							Ok: false,
+							Msg: fmt.Sprintf(
+								"error in verification; municipio=%s, local=%d, secao=%d, payload=%s",
+								b.IdentificacaoSecao.Municipio(),
+								b.IdentificacaoSecao.Local,
+								b.IdentificacaoSecao.Secao,
+								payload,
+							),
+						})
+					} else {
+						results = append(results, VerificationResult{
+							Ok: true,
+							Msg: fmt.Sprintf(
+								"verified; municipio=%s, local=%d, secao=%d, payload=%s",
+								b.IdentificacaoSecao.Municipio(),
+								b.IdentificacaoSecao.Local,
+								b.IdentificacaoSecao.Secao,
+								payload,
+							),
+						})
 					}
-
-					log.Printf(
-						"verified; municipio=%s, local=%d, secao=%d, payload=%s",
-						b.IdentificacaoSecao.Municipio(),
-						b.IdentificacaoSecao.Local,
-						b.IdentificacaoSecao.Secao,
-						payload,
-					)
 				}
 			}
 		}
 	}
 
-	return nil
+	return results
 }
 
 func buildPayload(vc TotalVotosCargo, vv TotalVotosVotavel, c Carga) []byte {

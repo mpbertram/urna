@@ -157,9 +157,9 @@ func verifyBu(files []string) {
 					log.Fatal(err)
 				}
 
-				err = urna.ValidateVotosBu(ebu)
-				if err != nil {
-					log.Fatal(err)
+				results := urna.ValidateVotosBu(ebu)
+				for _, r := range results {
+					log.Println(r.Msg)
 				}
 
 				return nil
@@ -172,9 +172,9 @@ func verifyBu(files []string) {
 				log.Fatal(err)
 			}
 
-			err = urna.ValidateVotosBu(bu)
-			if err != nil {
-				log.Fatal(err)
+			results := urna.ValidateVotosBu(bu)
+			for _, r := range results {
+				log.Println(r.Msg)
 			}
 		}
 	}

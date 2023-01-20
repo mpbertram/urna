@@ -28,11 +28,17 @@ func verifyVscmr(files []string) {
 		log.Printf("processing file %s", f)
 
 		if strings.HasSuffix(f, ".zip") {
-			urna.VerifyAssinaturaZip(f)
+			result := urna.VerifyAssinaturaZip(f)
+			for _, r := range result {
+				log.Println(r.Msg)
+			}
 		}
 
 		if strings.HasSuffix(f, ".vscmr") {
-			urna.VerifyAssinaturaVscmr(f)
+			result := urna.VerifyAssinaturaVscmr(f)
+			for _, r := range result {
+				log.Println(r.Msg)
+			}
 		}
 	}
 }
