@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/exp/slices"
 )
@@ -27,14 +28,70 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 	return a, nil
 }
 
-func VerifyAssinaturas(dir string) {
-	ProcessAllZip(dir, func(e EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
-		verifyEntidadeAssinatura(ctx, e.AssinaturaHW)
-		verifyEntidadeAssinatura(ctx, e.AssinaturaSW)
+func VerifyAssinaturaVscmr(path string) {
+	a, err := ReadAssinatura(path)
+	if err != nil {
+		log.Printf("error processing %s", path)
+	}
+
+	verifyAssinaturaVscmr(path, a.AssinaturaHW)
+	verifyAssinaturaVscmr(path, a.AssinaturaSW)
+}
+
+func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) {
+	conteudoAssinado, err := a.ReadConteudoAutoAssinado()
+	if err != nil {
+		log.Println(err)
+	}
+
+	checksum := sha512.Sum512(a.ConteudoAutoAssinado)
+	if !slices.Equal(checksum[:], a.AutoAssinado.Assinatura.Hash) {
+		log.Printf("hash check failed for auto content of %s", path)
+	} else {
+		log.Printf("hash check successful for auto content of %s", path)
+	}
+
+	err = a.VerifyAutoSignature()
+	if err != nil {
+		if err.Error() != "no certificate" {
+			log.Printf("signature check failed for auto content of %s", path)
+		}
+	} else {
+		log.Printf("signature check successful for auto content of %s", path)
+	}
+
+	for _, arquivo := range conteudoAssinado.ArquivosAssinados {
+		file, err := os.ReadFile(filepath.Join(filepath.Dir(path), arquivo.NomeArquivo))
+		if err != nil {
+			continue
+		}
+
+		checksum := sha512.Sum512(file)
+		if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
+			log.Printf("hash check failed for file %s", arquivo.NomeArquivo)
+		} else {
+			log.Printf("hash check successful for %s", arquivo.NomeArquivo)
+		}
+
+		err = a.VerifySignature(arquivo)
+		if err != nil {
+			if err.Error() != "no certificate" {
+				log.Printf("signature check failed for %s", arquivo.NomeArquivo)
+			}
+		} else {
+			log.Printf("signature check successful for %s", arquivo.NomeArquivo)
+		}
+	}
+}
+
+func VerifyAssinaturaZip(path string) {
+	ProcessZip(path, func(e EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
+		verifyAssinaturaZip(ctx, e.AssinaturaHW)
+		verifyAssinaturaZip(ctx, e.AssinaturaSW)
 	})
 }
 
-func verifyEntidadeAssinatura(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
+func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) {
 	arquivosAssinados, err := assinatura.ReadConteudoAutoAssinado()
 	if err != nil {
 		log.Fatal(err)

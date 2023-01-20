@@ -6,7 +6,7 @@ import (
 )
 
 func TestAssinaturaZip(t *testing.T) {
-	VerifyAssinaturas("test-data/signature")
+	VerifyAssinaturaZip("test-data/signature/o00407-0100700090001.zip")
 }
 
 func TestAssinatura(t *testing.T) {

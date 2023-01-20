@@ -7,7 +7,7 @@ import (
 
 var cargo string
 var candidatos string
-var folder string
+var glob string
 
 func main() {
 	var module string

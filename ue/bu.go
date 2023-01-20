@@ -14,11 +14,11 @@ import (
 )
 
 type BuEntry struct {
-	path string
+	Path string
 }
 
 func (entry BuEntry) ReadBu() (EntidadeBoletimUrna, error) {
-	f, err := os.ReadFile(entry.path)
+	f, err := os.ReadFile(entry.Path)
 	if err != nil {
 		return EntidadeBoletimUrna{}, err
 	}
@@ -121,7 +121,7 @@ func ValidateVotos(buEntries []BuEntry) error {
 	for _, entry := range buEntries {
 		b, err := entry.ReadBu()
 		if err != nil {
-			log.Println("could not read", entry.path)
+			log.Println("could not read", entry.Path)
 			continue
 		}
 
