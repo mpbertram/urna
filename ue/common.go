@@ -59,12 +59,14 @@ func FillSequence(bytes []byte, form any) error {
 	return nil
 }
 
+var zipCache map[string]*zip.ReadCloser = make(map[string]*zip.ReadCloser)
+
 type ZipProcessCtx struct {
 	ZipFilename string // name of the `*.zip` file
 	Filename    string // name of the file inside the `*.zip` file
 }
 
-func ProcessAllZipRaw(dir string, process func(*zip.File)) {
+func ProcessAllZipRaw(dir string, process func(*zip.File) bool) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
@@ -90,24 +92,25 @@ func ProcessAllZip(dir string, process any) {
 	}
 }
 
-func ProcessZipRaw(path string, process func(*zip.File)) {
-	r, err := zip.OpenReader(path)
+func ProcessZipRaw(path string, process func(*zip.File) bool) {
+	r, err := openZipReader(path)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
 
 	for _, f := range r.File {
-		process(f)
+		done := process(f)
+		if done {
+			break
+		}
 	}
 }
 
 func ProcessZip(path string, process any) {
-	r, err := zip.OpenReader(path)
+	r, err := openZipReader(path)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
 
 	entityType := reflect.TypeOf(process).In(0)
 	entity := reflect.New(entityType)
@@ -127,7 +130,7 @@ func ProcessZip(path string, process any) {
 			}
 
 			var buf bytes.Buffer
-			io.Copy(io.Writer(&buf), rc)
+			io.Copy(&buf, rc)
 
 			if err != nil {
 				log.Println(err)
@@ -163,4 +166,26 @@ func ProcessZip(path string, process any) {
 			rc.Close()
 		}
 	}
+}
+
+func openZipReader(path string) (*zip.ReadCloser, error) {
+	r, ok := zipCache[path]
+	if !ok {
+		var err error
+		r, err = zip.OpenReader(path)
+		if err != nil {
+			return nil, err
+		}
+		zipCache[path] = r
+
+		if len(zipCache) > 10 {
+			for f, r := range zipCache {
+				r.Close()
+				delete(zipCache, f)
+				break
+			}
+		}
+	}
+
+	return r, nil
 }

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -50,16 +49,17 @@ func verifyEntidadeAssinatura(ctx ZipProcessCtx, assinatura EntidadeAssinatura) 
 
 	err = assinatura.VerifyAutoSignature()
 	if err != nil {
-		if !strings.EqualFold(err.Error(), "no certificate") {
+		if err.Error() != "no certificate" {
 			log.Printf("signature check failed for auto content of %s", ctx.Filename)
 		}
 	} else {
 		log.Printf("signature check successful for auto content of %s", ctx.Filename)
 	}
 
-	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) {
+	var count int
+	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) bool {
 		for _, arquivo := range arquivosAssinados.ArquivosAssinados {
-			if strings.EqualFold(f.Name, arquivo.NomeArquivo) {
+			if f.Name == arquivo.NomeArquivo {
 				rc, err := f.Open()
 				if err != nil {
 					log.Fatal(err)
@@ -77,15 +77,23 @@ func verifyEntidadeAssinatura(ctx ZipProcessCtx, assinatura EntidadeAssinatura) 
 
 				err = assinatura.VerifySignature(arquivo)
 				if err != nil {
-					if !strings.EqualFold(err.Error(), "no certificate") {
+					if err.Error() != "no certificate" {
 						log.Printf("signature check failed for %s", arquivo.NomeArquivo)
 					}
 				} else {
 					log.Printf("signature check successful for %s", arquivo.NomeArquivo)
 				}
 
+				count++
 				rc.Close()
 			}
 		}
+
+		if count == len(arquivosAssinados.ArquivosAssinados) {
+			count = 0
+			return true
+		}
+
+		return false
 	})
 }
