@@ -19,13 +19,11 @@ func Bu() {
 
 	switch function {
 	case "count":
-		countBuFlags()
-		countBu(filesToProcess())
+		countBu(countBuFlags())
 	case "verify":
-		verifyBu(filesToProcess())
+		verifyBu(verifyBuFlags())
 	case "csv":
-		csvBuFlags()
-		buToCsv(filesToProcess())
+		buToCsv(csvBuFlags())
 	default:
 		fmt.Println("usage: urna bu <count|verify|csv> <options>")
 		fmt.Printf("provided function '%s' is none of (count, verify, csv)\n", function)
@@ -182,7 +180,7 @@ func verifyBu(files []string) {
 	}
 }
 
-func countBuFlags() {
+func countBuFlags() []string {
 	countFlags := flag.NewFlagSet("count", flag.ContinueOnError)
 	countFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
 
@@ -192,13 +190,15 @@ func countBuFlags() {
 	}
 
 	if len(cargo) == 0 {
-		fmt.Println("usage: urna bu count -glob <glob> -cargo <cargo>")
+		fmt.Println("usage: urna bu count -cargo <cargo> <file_1> ... <file_n>")
 		countFlags.PrintDefaults()
 		os.Exit(1)
 	}
+
+	return countFlags.Args()
 }
 
-func csvBuFlags() {
+func csvBuFlags() []string {
 	csvFlags := flag.NewFlagSet("csv", flag.ContinueOnError)
 	csvFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
 	csvFlags.StringVar(&candidatos, "candidatos", "", "Comma-separated list; e.g. 'Branco,Nulo,99'")
@@ -208,10 +208,23 @@ func csvBuFlags() {
 	}
 
 	if len(cargo) == 0 || len(candidatos) == 0 {
-		fmt.Println("usage: urna bu csv -cargo <cargo> -candidatos <candidatos> -glob <glob>")
+		fmt.Println("usage: urna bu csv -cargo <cargo> -candidatos <candidatos> <file_1> ... <file_n>")
 		csvFlags.PrintDefaults()
 		os.Exit(1)
 	}
+
+	return csvFlags.Args()
+}
+
+func verifyBuFlags() []string {
+	if len(os.Args) > 3 {
+		return os.Args[3:]
+	}
+
+	fmt.Println("usage: urna bu verify <file_1> ... <file_n>")
+	os.Exit(1)
+
+	return []string{}
 }
 
 func splitCandidatosIntoSlice() []string {

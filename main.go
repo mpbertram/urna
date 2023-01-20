@@ -24,14 +24,3 @@ func main() {
 		fmt.Printf("provided module '%s' is none of (bu, vscmr)\n", module)
 	}
 }
-
-func filesToProcess() []string {
-	if len(os.Args) > 3 {
-		return os.Args[3:]
-	}
-
-	fmt.Println("usage: urna <bu|vscmr> <function> <file_1> ... <file_n>")
-	os.Exit(1)
-
-	return []string{}
-}

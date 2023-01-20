@@ -17,7 +17,7 @@ func Vscmr() {
 
 	switch function {
 	case "verify":
-		verifyVscmr(filesToProcess())
+		verifyVscmr(verifyVscmrFlags())
 	default:
 		fmt.Println("usage: urna vscmr verify <file_1> ... <file_n>")
 	}
@@ -35,4 +35,15 @@ func verifyVscmr(files []string) {
 			urna.VerifyAssinaturaVscmr(f)
 		}
 	}
+}
+
+func verifyVscmrFlags() []string {
+	if len(os.Args) > 3 {
+		return os.Args[3:]
+	}
+
+	fmt.Println("usage: urna vscmr verify <file_1> ... <file_n>")
+	os.Exit(1)
+
+	return []string{}
 }
