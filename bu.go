@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	urna "github.com/mpbertram/urna/ue"
@@ -21,32 +20,28 @@ func Bu() {
 	switch function {
 	case "count":
 		countBuFlags()
-		countBu()
+		countBu(filesToProcess())
 	case "verify":
-		verifyBuFlags()
-		verifyBu()
+		verifyBu(filesToProcess())
 	case "csv":
 		csvBuFlags()
-		buToCsv()
+		buToCsv(filesToProcess())
 	default:
 		fmt.Println("usage: urna bu <count|verify|csv> <options>")
 		fmt.Printf("provided function '%s' is none of (count, verify, csv)\n", function)
 	}
 }
 
-func buToCsv() {
+func buToCsv(files []string) {
 	cargo := urna.CargoConstitucionalFromString(cargo)
 	candidatos := splitCandidatosIntoSlice()
 
 	w := csv.NewWriter(os.Stdout)
 	w.Write(append([]string{"UF", "Municipio", "Local", "Secao"}, candidatos...))
 
-	files, err := filepath.Glob(glob)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for _, f := range files {
+		log.Printf("processing file %s", f)
+
 		if strings.HasSuffix(f, ".zip") {
 			urna.ProcessZip(f, func(eeg urna.EntidadeEnvelopeGenerico) error {
 				bu, err := eeg.ReadBu()
@@ -105,16 +100,13 @@ func buToCsv() {
 	w.Flush()
 }
 
-func countBu() {
-	files, err := filepath.Glob(glob)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func countBu(files []string) {
 	cargos := []urna.CargoConstitucional{urna.CargoConstitucionalFromString(cargo)}
 	votos := make(map[urna.CargoConstitucional]map[string]int)
 
 	for _, f := range files {
+		log.Printf("processing file %s", f)
+
 		if strings.HasSuffix(f, ".zip") {
 			urna.ProcessZip(f, func(eeg urna.EntidadeEnvelopeGenerico) error {
 				ebu, err := eeg.ReadBu()
@@ -156,13 +148,10 @@ func countBu() {
 	log.Println(votos)
 }
 
-func verifyBu() {
-	files, err := filepath.Glob(glob)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func verifyBu(files []string) {
 	for _, f := range files {
+		log.Printf("processing file %s", f)
+
 		if strings.HasSuffix(f, ".zip") {
 			urna.ProcessZip(f, func(eeg urna.EntidadeEnvelopeGenerico) error {
 				ebu, err := eeg.ReadBu()
@@ -196,31 +185,15 @@ func verifyBu() {
 func countBuFlags() {
 	countFlags := flag.NewFlagSet("count", flag.ContinueOnError)
 	countFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
-	countFlags.StringVar(&glob, "glob", "", "glob of files to process")
 
 	err := countFlags.Parse(os.Args[3:])
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if len(cargo) == 0 || len(glob) == 0 {
+	if len(cargo) == 0 {
 		fmt.Println("usage: urna bu count -glob <glob> -cargo <cargo>")
 		countFlags.PrintDefaults()
-		os.Exit(1)
-	}
-}
-
-func verifyBuFlags() {
-	verifyFlags := flag.NewFlagSet("verify", flag.ContinueOnError)
-	verifyFlags.StringVar(&glob, "glob", "", "glob of files to process")
-	err := verifyFlags.Parse(os.Args[3:])
-	if err != nil {
-		os.Exit(1)
-	}
-
-	if len(glob) == 0 {
-		fmt.Println("usage: urna bu verify -glob <glob>")
-		verifyFlags.PrintDefaults()
 		os.Exit(1)
 	}
 }
@@ -229,13 +202,12 @@ func csvBuFlags() {
 	csvFlags := flag.NewFlagSet("csv", flag.ContinueOnError)
 	csvFlags.StringVar(&cargo, "cargo", "", "e.g. Presidente")
 	csvFlags.StringVar(&candidatos, "candidatos", "", "Comma-separated list; e.g. 'Branco,Nulo,99'")
-	csvFlags.StringVar(&glob, "glob", "", "glob of files to process")
 	err := csvFlags.Parse(os.Args[3:])
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if len(cargo) == 0 || len(glob) == 0 || len(candidatos) == 0 {
+	if len(cargo) == 0 || len(candidatos) == 0 {
 		fmt.Println("usage: urna bu csv -cargo <cargo> -candidatos <candidatos> -glob <glob>")
 		csvFlags.PrintDefaults()
 		os.Exit(1)

@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	urna "github.com/mpbertram/urna/ue"
@@ -19,20 +17,16 @@ func Vscmr() {
 
 	switch function {
 	case "verify":
-		verifyVscmrFlags()
-		verifyVscmr()
+		verifyVscmr(filesToProcess())
 	default:
-		fmt.Println("usage: urna vscmr verify <options>")
+		fmt.Println("usage: urna vscmr verify <file_1> ... <file_n>")
 	}
 }
 
-func verifyVscmr() {
-	files, err := filepath.Glob(glob)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func verifyVscmr(files []string) {
 	for _, f := range files {
+		log.Printf("processing file %s", f)
+
 		if strings.HasSuffix(f, ".zip") {
 			urna.VerifyAssinaturaZip(f)
 		}
@@ -40,20 +34,5 @@ func verifyVscmr() {
 		if strings.HasSuffix(f, ".vscmr") {
 			urna.VerifyAssinaturaVscmr(f)
 		}
-	}
-}
-
-func verifyVscmrFlags() {
-	verifyFlags := flag.NewFlagSet("verify", flag.ContinueOnError)
-	verifyFlags.StringVar(&glob, "glob", "", "glob of files to process")
-	err := verifyFlags.Parse(os.Args[3:])
-	if err != nil {
-		os.Exit(1)
-	}
-
-	if len(glob) == 0 {
-		fmt.Println("usage: urna vscmr verify -glob <glob>")
-		verifyFlags.PrintDefaults()
-		os.Exit(1)
 	}
 }
