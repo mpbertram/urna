@@ -11,7 +11,7 @@ func TestVscmrVerify(t *testing.T) {
 		os.Args = realArgs
 	}()
 
-	os.Args = []string{"", "vscmr", "verify", "ue/test-data/signature/o00407-0100700090001.zip"}
+	os.Args = []string{"", "vscmr", "verify", "ue/test-data/o00407-0100700090001.zip"}
 
 	main()
 }
@@ -22,7 +22,7 @@ func TestBuVerify(t *testing.T) {
 		os.Args = realArgs
 	}()
 
-	os.Args = []string{"", "bu", "verify", "ue/test-data/urna.zip"}
+	os.Args = []string{"", "bu", "verify", "ue/test-data/o00407-0100700090001.zip"}
 
 	main()
 }
