@@ -23,7 +23,9 @@ func TestBuVerify(t *testing.T) {
 	}()
 
 	os.Args = []string{"", "bu", "verify", "ue/test-data/o00407-0100700090001.zip"}
+	main()
 
+	os.Args = []string{"", "bu", "verify", "ue/test-data/urna.bu"}
 	main()
 }
 
@@ -33,8 +35,10 @@ func TestBuCount(t *testing.T) {
 		os.Args = realArgs
 	}()
 
-	os.Args = []string{"", "bu", "count", "-cargo", "Presidente", "ue/test-data/urna.bu"}
+	os.Args = []string{"", "bu", "count", "-cargo", "Presidente", "ue/test-data/o00407-0100700090001.zip"}
+	main()
 
+	os.Args = []string{"", "bu", "count", "-cargo", "Presidente", "ue/test-data/urna.bu"}
 	main()
 }
 
@@ -44,7 +48,9 @@ func TestBuCsv(t *testing.T) {
 		os.Args = realArgs
 	}()
 
-	os.Args = []string{"", "bu", "csv", "-candidatos", "Nulo,Branco", "-cargo", "Presidente", "ue/test-data/urna.bu"}
+	os.Args = []string{"", "bu", "csv", "-candidatos", "Nulo,Branco", "-cargo", "Presidente", "ue/test-data/o00407-0100700090001.zip"}
+	main()
 
+	os.Args = []string{"", "bu", "csv", "-candidatos", "Nulo,Branco", "-cargo", "Presidente", "ue/test-data/urna.bu"}
 	main()
 }
