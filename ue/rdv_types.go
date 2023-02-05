@@ -21,6 +21,27 @@ const (
 	Outros                          MotivoApuracaoEletronica = 99
 )
 
+func MotivoApuracaoEletronicaFromData(data asn1.Enumerated) (MotivoApuracaoEletronica, error) {
+	switch data {
+	case 0x01:
+		return NaoFoiPossivelReuperarResultado, nil
+	case 0x02:
+		return UrnaNaoChegouMidiaDefeituosa, nil
+	case 0x03:
+		return UrnaNaoChegouMidiaExtraviada, nil
+	default:
+		return Outros, nil
+	}
+}
+
+func (m MotivoApuracaoEletronica) String() string {
+	if m <= 0x03 {
+		return [...]string{"Nao foi possivel recuperar resultado", "Urna nao chegou (midia defeituosa)", "Urna nao chegou (midia extraviada)"}[m-1]
+	}
+
+	return "Outro"
+}
+
 // Origem dos votos inseridos no SA.
 type OrigemVotosSA byte
 

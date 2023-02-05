@@ -149,21 +149,17 @@ const (
 	OutrosApMan            MotivoApuracaoManual = 0x63
 )
 
-func MotivoApuracaoManualFromData(data []byte) (MotivoApuracaoManual, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return UrnaComDefeitoApMan, nil
-		case 0x02:
-			return UrnaIndisponivelInicio, nil
-		case 0x03:
-			return UrnaOutraSecao, nil
-		default:
-			return OutrosApMan, nil
-		}
+func MotivoApuracaoManualFromData(data asn1.Enumerated) (MotivoApuracaoManual, error) {
+	switch data {
+	case 0x01:
+		return UrnaComDefeitoApMan, nil
+	case 0x02:
+		return UrnaIndisponivelInicio, nil
+	case 0x03:
+		return UrnaOutraSecao, nil
+	default:
+		return OutrosApMan, nil
 	}
-
-	return OutrosApMan, errors.New("invalid data")
 }
 
 func (m MotivoApuracaoManual) String() string {
@@ -185,25 +181,21 @@ const (
 	OutrosApMisBu               MotivoApuracaoMistaComBU = 0x63
 )
 
-func MotivoApuracaoMistaComBUFromData(data []byte) (MotivoApuracaoMistaComBU, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return UrnaDataHoraIncorreta, nil
-		case 0x02:
-			return UrnaComDefeito, nil
-		case 0x03:
-			return UrnaOutrasecao, nil
-		case 0x04:
-			return UrnaPreparadaIncorretamente, nil
-		case 0x05:
-			return UrnaChegouAposInicioVotacao, nil
-		default:
-			return OutrosApMisBu, nil
-		}
+func MotivoApuracaoMistaComBUFromData(data asn1.Enumerated) (MotivoApuracaoMistaComBU, error) {
+	switch data {
+	case 0x01:
+		return UrnaDataHoraIncorreta, nil
+	case 0x02:
+		return UrnaComDefeito, nil
+	case 0x03:
+		return UrnaOutrasecao, nil
+	case 0x04:
+		return UrnaPreparadaIncorretamente, nil
+	case 0x05:
+		return UrnaChegouAposInicioVotacao, nil
+	default:
+		return OutrosApMisBu, nil
 	}
-
-	return OutrosApMisBu, errors.New("invalid data")
 }
 
 func (m MotivoApuracaoMistaComBU) String() string {
@@ -226,27 +218,23 @@ const (
 	OutrosApMisMr                      MotivoApuracaoMistaComMR = 0x63
 )
 
-func MotivoApuracaoMistaComMRFromData(data []byte) (MotivoApuracaoMistaComMR, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return NaoObteveExitoContingencia, nil
-		case 0x02:
-			return IndisponibilidadeUrnaContingencia, nil
-		case 0x03:
-			return IndisponibilidadeFlashContingencia, nil
-		case 0x04:
-			return ProblemaEnergiaEletrica, nil
-		case 0x05:
-			return NaoFoiPossivelTrocarUrna, nil
-		case 0x06:
-			return NaoFoiSolicitadaTrocaUrna, nil
-		default:
-			return OutrosApMisMr, nil
-		}
+func MotivoApuracaoMistaComMRFromData(data asn1.Enumerated) (MotivoApuracaoMistaComMR, error) {
+	switch data {
+	case 0x01:
+		return NaoObteveExitoContingencia, nil
+	case 0x02:
+		return IndisponibilidadeUrnaContingencia, nil
+	case 0x03:
+		return IndisponibilidadeFlashContingencia, nil
+	case 0x04:
+		return ProblemaEnergiaEletrica, nil
+	case 0x05:
+		return NaoFoiPossivelTrocarUrna, nil
+	case 0x06:
+		return NaoFoiSolicitadaTrocaUrna, nil
+	default:
+		return OutrosApMisMr, nil
 	}
-
-	return OutrosApMisMr, errors.New("invalid data")
 }
 
 func (m MotivoApuracaoMistaComMR) String() string {
@@ -264,29 +252,30 @@ const (
 	TotalmenteEletronica TipoApuracao = 0x02
 	MistaBU              TipoApuracao = 0x03
 	MistaMR              TipoApuracao = 0x04
+	TipoApuracaoNormal   TipoApuracao = 0x05
 	TipoApuracaoInvalida TipoApuracao = 0xff
 )
 
-func TipoApuracaoFromData(data []byte) (TipoApuracao, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return TotalmenteManual, nil
-		case 0x02:
-			return TotalmenteEletronica, nil
-		case 0x03:
-			return MistaBU, nil
-		case 0x04:
-			return MistaMR, nil
-		}
+func TipoApuracaoFromData(data asn1.Enumerated) (TipoApuracao, error) {
+	switch data {
+	case 0x01:
+		return TotalmenteManual, nil
+	case 0x02:
+		return TotalmenteEletronica, nil
+	case 0x03:
+		return MistaBU, nil
+	case 0x04:
+		return MistaMR, nil
+	case 0x05:
+		return TipoApuracaoNormal, nil
+	default:
+		return TipoApuracaoInvalida, errors.New("invalid data")
 	}
-
-	return TipoApuracaoInvalida, errors.New("invalid data")
 }
 
 func (t TipoApuracao) String() string {
-	if t <= 0x04 {
-		return [...]string{"TotalmenteManual", "TotalmenteEletronica", "MistaBU", "MistaMR"}[t-1]
+	if t <= 0x05 {
+		return [...]string{"TotalmenteManual", "TotalmenteEletronica", "MistaBU", "MistaMR", "Normal"}[t-1]
 	}
 
 	return "Invalido"
@@ -305,25 +294,23 @@ const (
 	TipoArquivoInvalido     TipoArquivo = 0xff
 )
 
-func TipoArquivoFromData(data []byte) (TipoArquivo, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return VotacaoUE, nil
-		case 0x02:
-			return VotacaoRED, nil
-		case 0x03:
-			return SaMistaMRParcialCedula, nil
-		case 0x04:
-			return SaMistaBUImpressoCedula, nil
-		case 0x05:
-			return SaManual, nil
-		case 0x06:
-			return SaEletronica, nil
-		}
+func TipoArquivoFromData(data asn1.Enumerated) (TipoArquivo, error) {
+	switch data {
+	case 0x01:
+		return VotacaoUE, nil
+	case 0x02:
+		return VotacaoRED, nil
+	case 0x03:
+		return SaMistaMRParcialCedula, nil
+	case 0x04:
+		return SaMistaBUImpressoCedula, nil
+	case 0x05:
+		return SaManual, nil
+	case 0x06:
+		return SaEletronica, nil
+	default:
+		return TipoArquivoInvalido, errors.New("invalid data")
 	}
-
-	return TipoArquivoInvalido, errors.New("invalid data")
 }
 
 func (t TipoArquivo) String() string {
@@ -414,29 +401,34 @@ const (
 	UrnaInvalida           TipoUrna = 0xff
 )
 
-func TipoUrnaFromData(data []byte) (TipoUrna, error) {
-	if len(data) == 1 {
-		switch v := data[0]; v {
-		case 0x01:
-			return Secao, nil
-		case 0x02:
-			return Contingencia, nil
-		case 0x03:
-			return ReservaSecao, nil
-		case 0x04:
-			return ReservaEncerrandoSecao, nil
-		}
+func TipoUrnaFromData(data asn1.Enumerated) (TipoUrna, error) {
+	switch data {
+	case 0x01:
+		return Secao, nil
+	case 0x03:
+		return Contingencia, nil
+	case 0x04:
+		return ReservaSecao, nil
+	case 0x06:
+		return ReservaEncerrandoSecao, nil
+	default:
+		return UrnaInvalida, errors.New("invalid data")
 	}
-
-	return UrnaInvalida, errors.New("invalid data")
 }
 
 func (t TipoUrna) String() string {
-	if t <= 0x04 {
-		return [...]string{"Secao", "Contingencia", "ReservaSecao", "ReservaEncerrandoSecao"}[t-1]
+	switch t {
+	case Secao:
+		return "Secao"
+	case Contingencia:
+		return "Contingencia"
+	case ReservaSecao:
+		return "ReservaSecao"
+	case ReservaEncerrandoSecao:
+		return "ReservaEncerrandoSecao"
+	default:
+		return "Invalido"
 	}
-
-	return "Invalido"
 }
 
 // Tipos de votos existentes na urna eletrônica.
@@ -492,6 +484,64 @@ type Urna struct {
 	TipoArquivo              asn1.Enumerated          // Tipo do arquivo gerado pela urna eletrônica.
 	NumeroSerieFV            NumeroSerieFlash         // Número de série da Flash de Votação.
 	MotivoUtilizacaoSA       asn1.RawValue            `asn1:"optional"` // Identificador numérico para o motivo de utilização do <glossario id='sistema-de-apuracao'>Sistema de Apuração</glossario> para a urna eletrônica.
+}
+
+// Read result with reflect.TypeOf; it will be one of (IdentificacaoSecaoEleitoral, IdentificacaoContingencia)
+func (u Urna) ReadMotivoUtilizacaoSA() (Apuracao, error) {
+	if len(u.MotivoUtilizacaoSA.Bytes) == 0 {
+		return ApuracaoNormal{}, nil
+	}
+
+	switch u.MotivoUtilizacaoSA.Tag {
+	case 0:
+		var a ApuracaoMistaMR
+		err := FillSequence(u.MotivoUtilizacaoSA.Bytes, &a)
+		if err != nil {
+			return nil, err
+		}
+		return a, nil
+	case 1:
+		var a ApuracaoMistaBUAE
+		err := FillSequence(u.MotivoUtilizacaoSA.Bytes, &a)
+		if err != nil {
+			return nil, errors.New("could not unmarshal")
+		}
+		return a, nil
+	case 2:
+		var a ApuracaoTotalmenteManualDigitacaoAE
+		err := FillSequence(u.MotivoUtilizacaoSA.Bytes, &a)
+		if err != nil {
+			return nil, errors.New("could not unmarshal")
+		}
+		return a, nil
+	case 3:
+		var a ApuracaoEletronica
+		err := FillSequence(u.MotivoUtilizacaoSA.Bytes, &a)
+		if err != nil {
+			return nil, errors.New("could not unmarshal")
+		}
+		return a, nil
+	}
+
+	return nil, errors.New("could not read motivo utilizacao SA")
+}
+
+func (u Urna) Tipo() TipoUrna {
+	t, err := TipoUrnaFromData(u.TipoUrna)
+	if err != nil {
+		return UrnaInvalida
+	}
+
+	return t
+}
+
+func (u Urna) TipoDeArquivo() TipoArquivo {
+	t, err := TipoArquivoFromData(u.TipoArquivo)
+	if err != nil {
+		return TipoArquivoInvalido
+	}
+
+	return t
 }
 
 // Envelope
@@ -573,9 +623,43 @@ func (b EntidadeBoletimUrna) ReadDadosSecaoSA() (interface{}, error) {
 }
 
 // DEMAIS SEQUENCES E CHOICES (ordem alfabética)
+
+type Apuracao interface {
+	Tipo() TipoApuracao
+	Motivo() string
+}
+
+type ApuracaoNormal struct{}
+
+func (a ApuracaoNormal) Tipo() TipoApuracao {
+	return TipoApuracaoNormal
+}
+
+func (a ApuracaoNormal) Motivo() string {
+	return "Normal"
+}
+
 type ApuracaoEletronica struct {
 	Tipoapuracao   asn1.Enumerated
 	MotivoApuracao asn1.Enumerated
+}
+
+func (a ApuracaoEletronica) Tipo() TipoApuracao {
+	t, err := TipoApuracaoFromData(a.Tipoapuracao)
+	if err != nil {
+		return TipoApuracaoInvalida
+	}
+
+	return t
+}
+
+func (a ApuracaoEletronica) Motivo() string {
+	t, err := MotivoApuracaoEletronicaFromData(a.MotivoApuracao)
+	if err != nil {
+		return Outros.String()
+	}
+
+	return t.String()
 }
 
 type ApuracaoMistaBUAE struct {
@@ -583,14 +667,68 @@ type ApuracaoMistaBUAE struct {
 	MotivoApuracao asn1.Enumerated
 }
 
+func (a ApuracaoMistaBUAE) Tipo() TipoApuracao {
+	t, err := TipoApuracaoFromData(a.Tipoapuracao)
+	if err != nil {
+		return TipoApuracaoInvalida
+	}
+
+	return t
+}
+
+func (a ApuracaoMistaBUAE) Motivo() string {
+	t, err := MotivoApuracaoMistaComBUFromData(a.MotivoApuracao)
+	if err != nil {
+		return Outros.String()
+	}
+
+	return t.String()
+}
+
 type ApuracaoMistaMR struct {
 	TipoApuracao   asn1.Enumerated
 	MotivoApuracao asn1.Enumerated
 }
 
+func (a ApuracaoMistaMR) Tipo() TipoApuracao {
+	t, err := TipoApuracaoFromData(a.TipoApuracao)
+	if err != nil {
+		return TipoApuracaoInvalida
+	}
+
+	return t
+}
+
+func (a ApuracaoMistaMR) Motivo() string {
+	t, err := MotivoApuracaoMistaComMRFromData(a.MotivoApuracao)
+	if err != nil {
+		return Outros.String()
+	}
+
+	return t.String()
+}
+
 type ApuracaoTotalmenteManualDigitacaoAE struct {
 	Tipoapuracao   asn1.Enumerated
 	MotivoApuracao asn1.Enumerated
+}
+
+func (a ApuracaoTotalmenteManualDigitacaoAE) Tipo() TipoApuracao {
+	t, err := TipoApuracaoFromData(a.Tipoapuracao)
+	if err != nil {
+		return TipoApuracaoInvalida
+	}
+
+	return t
+}
+
+func (a ApuracaoTotalmenteManualDigitacaoAE) Motivo() string {
+	t, err := MotivoApuracaoManualFromData(a.MotivoApuracao)
+	if err != nil {
+		return Outros.String()
+	}
+
+	return t.String()
 }
 
 // Identificador com informações da carga da urna eletrônica.
