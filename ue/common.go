@@ -125,7 +125,7 @@ func ProcessZip(path string, process any) {
 		if strings.HasSuffix(f.Name, extension.String()) {
 			rc, err := f.Open()
 			if err != nil {
-				log.Println(err)
+				log.Println("could not open file inside zip:", err)
 				return
 			}
 
@@ -174,14 +174,27 @@ func openZipReader(path string) (*zip.ReadCloser, error) {
 		var err error
 		r, err = zip.OpenReader(path)
 		if err != nil {
+			log.Println("could not open:", err)
 			return nil, err
 		}
+
+		log.Println("opened:", path)
 		zipCache[path] = r
 
 		if len(zipCache) > 10 {
 			for f, r := range zipCache {
-				r.Close()
+				if f == path {
+					log.Println("skipping as just opened:", f)
+					continue
+				}
+
+				err := r.Close()
+				if err != nil {
+					log.Println("could not close:", err)
+				}
 				delete(zipCache, f)
+
+				log.Println("closed:", f)
 				break
 			}
 		}
