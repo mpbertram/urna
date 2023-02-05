@@ -178,13 +178,11 @@ func openZipReader(path string) (*zip.ReadCloser, error) {
 			return nil, err
 		}
 
-		log.Println("opened:", path)
 		zipCache[path] = r
 
 		if len(zipCache) > 10 {
 			for f, r := range zipCache {
 				if f == path {
-					log.Println("skipping as just opened:", f)
 					continue
 				}
 
@@ -194,7 +192,6 @@ func openZipReader(path string) (*zip.ReadCloser, error) {
 				}
 				delete(zipCache, f)
 
-				log.Println("closed:", f)
 				break
 			}
 		}
