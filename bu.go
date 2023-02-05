@@ -35,7 +35,7 @@ func buToCsv(files []string) {
 	candidatos := splitCandidatosIntoSlice()
 
 	w := csv.NewWriter(os.Stdout)
-	w.Write(append([]string{"UF", "Municipio", "Local", "Secao"}, candidatos...))
+	w.Write(append([]string{"UF", "Municipio", "Zona", "Local", "Secao"}, candidatos...))
 
 	for _, f := range files {
 		log.Printf("processing file %s", f)
@@ -57,6 +57,7 @@ func buToCsv(files []string) {
 						[]string{
 							bu.IdentificacaoSecao.Municipio().Uf,
 							bu.IdentificacaoSecao.Municipio().Nome,
+							fmt.Sprint(bu.IdentificacaoSecao.MunicipioZona.Zona),
 							fmt.Sprint(bu.IdentificacaoSecao.Local),
 							fmt.Sprint(bu.IdentificacaoSecao.Secao),
 						},
@@ -86,6 +87,7 @@ func buToCsv(files []string) {
 					[]string{
 						bu.IdentificacaoSecao.Municipio().Uf,
 						bu.IdentificacaoSecao.Municipio().Nome,
+						fmt.Sprint(bu.IdentificacaoSecao.MunicipioZona.Zona),
 						fmt.Sprint(bu.IdentificacaoSecao.Local),
 						fmt.Sprint(bu.IdentificacaoSecao.Secao),
 					},
