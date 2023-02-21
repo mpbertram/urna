@@ -58,34 +58,9 @@ func buToCsv(files []string) {
 					log.Fatal(err)
 				}
 
-				votos := urna.CountVotosBu(bu, []urna.CargoConstitucional{cargo})
-				var votosForCandidato []string
-				for _, candidato := range candidatos {
-					votosForCandidato = append(votosForCandidato, fmt.Sprint(votos[cargo][candidato]))
-				}
-
-				apuracao, err := bu.Urna.ReadMotivoUtilizacaoSA()
-				if err != nil {
-					log.Println(err)
-				}
-				w.Write(
-					append(
-						[]string{
-							bu.IdentificacaoSecao.Municipio().Uf,
-							bu.IdentificacaoSecao.Municipio().Nome,
-							bu.Urna.Tipo().String(),
-							bu.Urna.TipoDeArquivo().String(),
-							apuracao.Tipo().String(),
-							apuracao.Motivo(),
-							fmt.Sprint(bu.IdentificacaoSecao.MunicipioZona.Zona),
-							fmt.Sprint(bu.IdentificacaoSecao.Local),
-							fmt.Sprint(bu.IdentificacaoSecao.Secao),
-						},
-						votosForCandidato...,
-					),
-				)
-
+				w.Write(countVotos(bu, cargo, candidatos))
 				w.Flush()
+
 				return nil
 			})
 		}
@@ -97,36 +72,37 @@ func buToCsv(files []string) {
 				log.Fatal(err)
 			}
 
-			votos := urna.CountVotosBu(bu, []urna.CargoConstitucional{cargo})
-			var votosForCandidato []string
-			for _, candidato := range candidatos {
-				votosForCandidato = append(votosForCandidato, fmt.Sprint(votos[cargo][candidato]))
-			}
-
-			apuracao, err := bu.Urna.ReadMotivoUtilizacaoSA()
-			if err != nil {
-				log.Println(err)
-			}
-			w.Write(
-				append(
-					[]string{
-						bu.IdentificacaoSecao.Municipio().Uf,
-						bu.IdentificacaoSecao.Municipio().Nome,
-						bu.Urna.Tipo().String(),
-						bu.Urna.TipoDeArquivo().String(),
-						apuracao.Tipo().String(),
-						apuracao.Motivo(),
-						fmt.Sprint(bu.IdentificacaoSecao.MunicipioZona.Zona),
-						fmt.Sprint(bu.IdentificacaoSecao.Local),
-						fmt.Sprint(bu.IdentificacaoSecao.Secao),
-					},
-					votosForCandidato...,
-				),
-			)
+			w.Write(countVotos(bu, cargo, candidatos))
 		}
 	}
 
 	w.Flush()
+}
+
+func countVotos(bu urna.EntidadeBoletimUrna, cargo urna.CargoConstitucional, candidatos []string) []string {
+	votos := urna.CountVotosBu(bu, []urna.CargoConstitucional{cargo})
+	var votosForCandidato []string
+	for _, candidato := range candidatos {
+		votosForCandidato = append(votosForCandidato, fmt.Sprint(votos[cargo][candidato]))
+	}
+
+	apuracao, err := bu.Urna.ReadMotivoUtilizacaoSA()
+	if err != nil {
+		log.Println(err)
+	}
+
+	return append(
+		[]string{
+			bu.IdentificacaoSecao.Municipio().Uf,
+			bu.IdentificacaoSecao.Municipio().Nome,
+			bu.Urna.Tipo().String(),
+			bu.Urna.TipoDeArquivo().String(),
+			apuracao.Tipo().String(),
+			apuracao.Motivo(),
+			fmt.Sprint(bu.IdentificacaoSecao.MunicipioZona.Zona),
+			fmt.Sprint(bu.IdentificacaoSecao.Local),
+			fmt.Sprint(bu.IdentificacaoSecao.Secao),
+		}, votosForCandidato...)
 }
 
 func countBu(files []string) {
