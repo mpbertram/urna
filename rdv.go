@@ -110,15 +110,15 @@ func processVotos(vc urna.VotosCargo, w *csv.Writer, id int, date urna.DataHoraJ
 		}
 
 		tipoVoto = tv.String()
-	}
 
-	w.Write([]string{
-		fmt.Sprint(id),
-		string(date),
-		cargo,
-		fmt.Sprint(escolhas),
-		tipoVoto,
-		votoDigitado})
+		w.Write([]string{
+			fmt.Sprint(id),
+			string(date),
+			cargo,
+			fmt.Sprint(escolhas),
+			tipoVoto,
+			votoDigitado})
+	}
 
 	w.Flush()
 }
