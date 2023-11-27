@@ -59,6 +59,66 @@ const (
 	CedulaSAProporcional TipoCedulaSA = 2
 )
 
+type TipoVotoRdv int
+
+const (
+	LegendaRdv                            TipoVotoRdv = 0x01 // <glossario id='votos-nominais'>Voto nominal.</glossario>
+	NominalRdv                            TipoVotoRdv = 0x02 // Voto branco.
+	BrancoRdv                             TipoVotoRdv = 0x03 // Voto nulo.
+	NuloRdv                               TipoVotoRdv = 0x04 // <glossario id='votos-de-legenda'>Voto de legenda.</glossario>
+	BrancoAposSuspensaoRdv                TipoVotoRdv = 0x05 // Nenhum candidato para ser votado no cargo.
+	NuloAposSuspensaoRdv                  TipoVotoRdv = 0x06
+	NuloPorRepeticaoRdv                   TipoVotoRdv = 0x07
+	NuloCargoSemCandidatoRdv              TipoVotoRdv = 0x08
+	NuloAposSuspensaoCargoSemCandidatoRdv TipoVotoRdv = 0x09
+	TipoVotoInvalidoRdv                   TipoVotoRdv = 0xff
+)
+
+func TipoVotoRdvFromData(data int) (TipoVotoRdv, error) {
+
+	switch v := data; v {
+	case 0x01:
+		return LegendaRdv, nil
+	case 0x02:
+		return NominalRdv, nil
+	case 0x03:
+		return BrancoRdv, nil
+	case 0x04:
+		return NuloRdv, nil
+	case 0x05:
+		return BrancoAposSuspensaoRdv, nil
+	case 0x06:
+		return NuloAposSuspensaoRdv, nil
+	case 0x07:
+		return NuloPorRepeticaoRdv, nil
+	case 0x08:
+		return NuloCargoSemCandidatoRdv, nil
+	case 0x09:
+		return NuloAposSuspensaoCargoSemCandidatoRdv, nil
+	case 0xff:
+		return TipoVotoInvalidoRdv, nil
+	}
+
+	return TipoVotoInvalidoRdv, errors.New("invalid data")
+}
+
+func (t TipoVotoRdv) String() string {
+	if t <= 0x09 {
+		return [...]string{
+			"Legenda",
+			"Nominal",
+			"Branco",
+			"Nulo",
+			"Branco apos suspensao",
+			"Nulo apos suspensao",
+			"Nulo por repeticao",
+			"Nulo cargo sem candidato",
+			"Nulo apos suspensao cargo sem candidato"}[t-1]
+	}
+
+	return "Invalido"
+}
+
 // SEQUENCES e CHOICES
 // Entidade usada para a geração do RDV na memória de resultado.
 type EntidadeResultadoRDV struct {
@@ -101,18 +161,39 @@ func (e EntidadeResultadoRDV) Extension() string {
 	return ".rdv"
 }
 
+type EleicaoGenerica interface {
+	GetId() int
+	GetVotosCargos() []VotosCargo
+}
+
 // Votos para todos os cargos de uma eleição.
 type EleicaoVota struct {
 	IdEleicao   int          // Identificador da eleição.
 	VotosCargos []VotosCargo // Grupo de cédulas da eleição.
 }
 
+func (e EleicaoVota) GetId() int {
+	return e.IdEleicao
+}
+
+func (e EleicaoVota) GetVotosCargos() []VotosCargo {
+	return e.VotosCargos
+}
+
 // Votos para todos os cargos de uma eleição.
 type EleicaoSA struct {
-	IdEleicao     IDEleicao     // Identificador da eleição.
-	TipoCedulaSA  TipoCedulaSA  // Tipo da cédula de papel apurada pelo SA.
-	OrigemVotosSA OrigemVotosSA // A origem dos votos inseridos no SA.
-	VotosCargos   []VotosCargo  // Grupo de cédulas da eleição.
+	IdEleicao     int             // Identificador da eleição.
+	TipoCedulaSA  asn1.Enumerated // Tipo da cédula de papel apurada pelo SA.
+	OrigemVotosSA asn1.Enumerated // A origem dos votos inseridos no SA.
+	VotosCargos   []VotosCargo    // Grupo de cédulas da eleição.
+}
+
+func (e EleicaoSA) GetId() int {
+	return e.IdEleicao
+}
+
+func (e EleicaoSA) GetVotosCargos() []VotosCargo {
+	return e.VotosCargos
 }
 
 // Votos de um eleitor para todas as escolhas de um cargo.

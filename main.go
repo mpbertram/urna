@@ -19,8 +19,10 @@ func main() {
 		Bu()
 	case "vscmr":
 		Vscmr()
+	case "rdv":
+		Rdv()
 	default:
-		fmt.Println("usage: urna <bu|vscmr> <function> <options>")
-		fmt.Printf("provided module '%s' is none of (bu, vscmr)\n", module)
+		fmt.Println("usage: urna <bu|vscmr|rdv> <function> <options>")
+		fmt.Printf("provided module '%s' is none of (bu, vscmr, rdv)\n", module)
 	}
 }
