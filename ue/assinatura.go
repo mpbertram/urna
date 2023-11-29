@@ -61,7 +61,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 		results = append(results, VerificationResult{
 			Ok: false,
 			Msg: fmt.Sprintf(
-				"hash check failed for auto content of %s, zona=%s, secao=%s",
+				"[nok] [hash] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
 			),
 		})
@@ -69,7 +69,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"hash check successful for auto content of %s, zona=%s, secao=%s",
+				"[ok] [hash] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
 			),
 		})
@@ -81,7 +81,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			results = append(results, VerificationResult{
 				Ok: false,
 				Msg: fmt.Sprintf(
-					"signature check failed for auto content of %s, zona=%s, secao=%s",
+					"[nok] [signature] auto content of %s, zona=%s, secao=%s",
 					MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
 				),
 			})
@@ -90,7 +90,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"signature check successful for auto content of %s, zona=%s, secao=%s",
+				"[ok] [signature] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
 			),
 		})
@@ -107,7 +107,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			results = append(results, VerificationResult{
 				Ok: false,
 				Msg: fmt.Sprintf(
-					"hash check failed for file %s, zona=%s, secao=%s",
+					"[nok] [hash] file %s, zona=%s, secao=%s",
 					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 				),
 			})
@@ -115,7 +115,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			results = append(results, VerificationResult{
 				Ok: true,
 				Msg: fmt.Sprintf(
-					"hash check successful for file %s, zona=%s, secao=%s",
+					"[ok] [hash] file %s, zona=%s, secao=%s",
 					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 				),
 			})
@@ -127,7 +127,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 				results = append(results, VerificationResult{
 					Ok: false,
 					Msg: fmt.Sprintf(
-						"signature check failed for %s, zona=%s, secao=%s",
+						"[nok] [signature] %s, zona=%s, secao=%s",
 						MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 					),
 				})
@@ -136,7 +136,7 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			results = append(results, VerificationResult{
 				Ok: true,
 				Msg: fmt.Sprintf(
-					"signature check successful for %s, zona=%s, secao=%s",
+					"[ok] [signature] %s, zona=%s, secao=%s",
 					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 				),
 			})
@@ -170,7 +170,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 		results = append(results, VerificationResult{
 			Ok: false,
 			Msg: fmt.Sprintf(
-				"hash check failed for auto content of %s, zona=%s, secao=%s",
+				"[nok] [hash] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
 			),
 		})
@@ -178,7 +178,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"hash check successful for auto content of %s, zona=%s, secao=%s",
+				"[ok] [hash] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
 			),
 		})
@@ -190,7 +190,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 			results = append(results, VerificationResult{
 				Ok: false,
 				Msg: fmt.Sprintf(
-					"signature check failed for auto content of %s, zona=%s, secao=%s",
+					"[nok] [signature] auto content of %s, zona=%s, secao=%s",
 					MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
 				),
 			})
@@ -199,7 +199,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"signature check successful for auto content of %s, zona=%s, secao=%s",
+				"[ok] [signature] auto content of %s, zona=%s, secao=%s",
 				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
 			),
 		})
@@ -222,7 +222,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 					results = append(results, VerificationResult{
 						Ok: false,
 						Msg: fmt.Sprintf(
-							"hash check failed for %s, zona=%s, secao=%s",
+							"[nok] [hash] %s, zona=%s, secao=%s",
 							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 						),
 					})
@@ -230,7 +230,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 					results = append(results, VerificationResult{
 						Ok: true,
 						Msg: fmt.Sprintf(
-							"hash check successful for %s, zona=%s, secao=%s",
+							"[ok] [hash] %s, zona=%s, secao=%s",
 							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 						),
 					})
@@ -242,7 +242,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 						results = append(results, VerificationResult{
 							Ok: false,
 							Msg: fmt.Sprintf(
-								"signature check failed for %s, zona=%s, secao=%s",
+								"[nok] [signature] %s, zona=%s, secao=%s",
 								MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 							),
 						})
@@ -251,7 +251,7 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 					results = append(results, VerificationResult{
 						Ok: true,
 						Msg: fmt.Sprintf(
-							"signature check successful for %s, zona=%s, secao=%s",
+							"[ok] [signature] %s, zona=%s, secao=%s",
 							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
 						),
 					})
