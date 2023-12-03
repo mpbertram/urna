@@ -31,6 +31,9 @@ func verifyVscmr(files []string) {
 			result := urna.VerifyAssinaturaZip(f)
 			for _, r := range result {
 				log.Println(r.Msg)
+				if r.Err != nil {
+					log.Println(r.Err)
+				}
 			}
 		}
 
@@ -38,6 +41,9 @@ func verifyVscmr(files []string) {
 			result := urna.VerifyAssinaturaVscmr(f)
 			for _, r := range result {
 				log.Println(r.Msg)
+				if r.Err != nil {
+					log.Println(r.Err)
+				}
 			}
 		}
 	}

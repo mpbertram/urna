@@ -3,8 +3,8 @@
 package ue
 
 import (
-	"encoding/asn1"
 	"errors"
+	"github.com/google/certificate-transparency-go/asn1"
 	"strings"
 )
 

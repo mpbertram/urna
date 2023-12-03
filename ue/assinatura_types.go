@@ -3,31 +3,68 @@
 package ue
 
 import (
-	"crypto/x509"
-	"encoding/asn1"
+	"crypto"
+	"crypto/ecdsa"
+	"encoding/pem"
 	"errors"
+	"github.com/google/certificate-transparency-go/asn1"
+	"github.com/google/certificate-transparency-go/x509"
+	"math/big"
+	"strings"
 )
 
 // ENUMS
 // Tipos de algoritmos de assinatura (cepesc é o algoritmo padrão (ainda não há previsão de uso dos demais)).
 
-type AlgoritmoAssinatura byte
+type AlgoritmoAssinatura int
 
 const (
-	Rsa    AlgoritmoAssinatura = 1
-	Ecdsa  AlgoritmoAssinatura = 2
-	Cepesc AlgoritmoAssinatura = 3
+	Rsa                        AlgoritmoAssinatura = 1
+	Ecdsa                      AlgoritmoAssinatura = 2
+	Cepesc                     AlgoritmoAssinatura = 3
+	UnknownAlgoritmoAssinatura AlgoritmoAssinatura = 0xfffffffffffffff
 )
+
+func AlgoritmoAssinaturaFromData(data int) (AlgoritmoAssinatura, error) {
+
+	switch v := data; v {
+	case 0x01:
+		return Rsa, nil
+	case 0x02:
+		return Ecdsa, nil
+	case 0x03:
+		return Cepesc, nil
+	}
+
+	return UnknownAlgoritmoAssinatura, errors.New("invalid data")
+}
 
 // Tipos de algoritmos de hash (Todos os algoritmos devem ser suportados mas sha512 é o padrão).
-type AlgoritmoHash byte
+type AlgoritmoHash int
 
 const (
-	Sha1   AlgoritmoHash = 1
-	Sha256 AlgoritmoHash = 2
-	Sha384 AlgoritmoHash = 3
-	Sha512 AlgoritmoHash = 4
+	Sha1                 AlgoritmoHash = 1
+	Sha256               AlgoritmoHash = 2
+	Sha384               AlgoritmoHash = 3
+	Sha512               AlgoritmoHash = 4
+	UnknownAlgoritmoHash AlgoritmoHash = 0xfffffffffffffff
 )
+
+func AlgoritmoHashFromData(data int) (AlgoritmoHash, error) {
+
+	switch v := data; v {
+	case 0x01:
+		return Sha1, nil
+	case 0x02:
+		return Sha256, nil
+	case 0x03:
+		return Sha384, nil
+	case 0x04:
+		return Sha512, nil
+	}
+
+	return UnknownAlgoritmoHash, errors.New("invalid data")
+}
 
 // Tipos de modelos de urna eletrônica.
 type ModeloUrna byte
@@ -52,63 +89,124 @@ type EntidadeAssinatura struct {
 	ConjuntoChave        string                `asn1:"optional"` // Identificador do conjunto de chaves usado para assinar o pacote.
 }
 
-func (e EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
+func (sig EntidadeAssinatura) GetSinatureAlgorithm() (x509.SignatureAlgorithm, error) {
+	algHash, err := AlgoritmoHashFromData(int(sig.AutoAssinado.AlgoritmoHash.Algoritmo))
+	if err != nil {
+		return x509.UnknownSignatureAlgorithm, err
+	}
+
+	algSig, err := AlgoritmoAssinaturaFromData(int(sig.AutoAssinado.AlgoritmoAssinatura.Algoritmo))
+	if err != nil {
+		return x509.UnknownSignatureAlgorithm, err
+	}
+
+	if algHash == Sha512 && algSig == Ecdsa {
+		return x509.ECDSAWithSHA512, nil
+	}
+
+	return x509.UnknownSignatureAlgorithm, errors.New("unsupported")
+}
+
+func (sig EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
 	var a Assinatura
-	_, err := asn1.Unmarshal(e.ConteudoAutoAssinado, &a)
+	_, err := asn1.Unmarshal(sig.ConteudoAutoAssinado, &a)
 	if err != nil {
 		return Assinatura{}, err
 	}
 	return a, nil
 }
 
-func (e EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
-	cert, err := x509.ParseCertificate(e.CertificadoDigital)
+func (sig EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
+
+	cert, err := x509.ParseCertificate(sig.CertificadoDigital)
+
 	if err != nil {
+		if err.Error() == "asn1: syntax error: trailing data" {
+			cert, err := x509.ParseCertificate(sig.CertificadoDigital[:len(sig.CertificadoDigital)-1])
+
+			if err != nil {
+				return &x509.Certificate{}, err
+			}
+
+			return cert, nil
+		}
+
+		if strings.Contains(err.Error(), "tags don't match") {
+			pemCert, _ := pem.Decode(sig.CertificadoDigital)
+
+			if cert, err := x509.ParseCertificate(pemCert.Bytes); err != nil {
+				return &x509.Certificate{}, err
+			} else {
+				return cert, nil
+			}
+		}
+
 		return &x509.Certificate{}, err
 	}
 
 	return cert, nil
 }
 
-func (a EntidadeAssinatura) VerifyAutoSignature() error {
-	if len(a.CertificadoDigital) == 0 {
-		return errors.New("no certificate")
-	}
-
-	cert, err := a.ParseCertificate()
-	if err != nil {
-		return err
-	}
-
-	err = cert.CheckSignature(
-		cert.SignatureAlgorithm,
-		a.AutoAssinado.Assinatura.Hash,
-		a.AutoAssinado.Assinatura.Assinatura,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
+type dsaSignature struct {
+	R, S *big.Int
 }
 
-func (a EntidadeAssinatura) VerifySignature(arq AssinaturaArquivo) error {
-	if len(a.CertificadoDigital) == 0 {
+func (sig EntidadeAssinatura) VerifyAutoSignature() error {
+	return sig.verifySignature(sig.AutoAssinado.Assinatura)
+}
+
+func (sig EntidadeAssinatura) VerifySignature(file AssinaturaArquivo) error {
+	return sig.verifySignature(file.Assinatura)
+}
+
+func (sig EntidadeAssinatura) verifySignature(digSig AssinaturaDigital) error {
+	if len(sig.CertificadoDigital) == 0 {
 		return errors.New("no certificate")
 	}
 
-	cert, err := a.ParseCertificate()
+	cert, err := sig.ParseCertificate()
 	if err != nil {
 		return err
 	}
 
-	err = cert.CheckSignature(
-		cert.SignatureAlgorithm,
-		arq.Assinatura.Hash,
-		arq.Assinatura.Assinatura,
-	)
-	if err != nil {
-		return err
+	switch publicKey := cert.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		signed := digSig.Hash
+		hashType := crypto.SHA512
+		hash := hashType.New()
+		hash.Write(signed)
+		signed = hash.Sum(nil)
+
+		ecdsaSig := new(dsaSignature)
+		if rest, err := asn1.UnmarshalWithParams(digSig.Assinatura, ecdsaSig, "lax"); err != nil {
+			return err
+		} else if len(rest) != 0 {
+			return errors.New("x509: trailing data after ECDSA signature")
+		}
+		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+			return errors.New("x509: ECDSA signature contained zero or negative values")
+		}
+		if !ecdsa.Verify(publicKey, signed, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("x509: ECDSA verification failure")
+		}
+	default:
+		sigAlg := cert.SignatureAlgorithm
+
+		if sigAlg == x509.UnknownSignatureAlgorithm {
+			sigAlg, err = sig.GetSinatureAlgorithm()
+			if err != nil {
+				return err
+			}
+		}
+
+		err = cert.CheckSignature(
+			sigAlg,
+			digSig.Hash,
+			digSig.Assinatura,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -154,7 +252,7 @@ type AssinaturaArquivo struct {
 type AssinaturaDigital struct {
 	Tamanho    int    // Tamanho da assinatura.
 	Hash       []byte // Hash da assinatura (Deve ser calculado uma única vez e ser utilizado também para o cálculo da assinatura).
-	Assinatura []byte // Assinatura (Gerado/verificado a partir do hash acima).
+	Assinatura []byte `asn1:"lax"` // Assinatura (Gerado/verificado a partir do hash acima).
 }
 
 // Informações da auto assinatura digital.

@@ -4,8 +4,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha512"
-	"encoding/asn1"
 	"fmt"
+	"github.com/google/certificate-transparency-go/asn1"
 	"io"
 	"log"
 	"os"
@@ -31,6 +31,7 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 
 type VerificationResult struct {
 	Ok  bool
+	Err error
 	Msg string
 }
 
@@ -79,10 +80,15 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 	if err != nil {
 		if err.Error() != "no certificate" {
 			results = append(results, VerificationResult{
-				Ok: false,
+				Ok:  false,
+				Err: err,
 				Msg: fmt.Sprintf(
-					"[nok] [signature] auto content of %s, zona=%s, secao=%s",
-					MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
+					"[nok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
+					MunicipioByFile(path),
+					ZonaByFile(path),
+					SecaoByFile(path),
+					a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+					a.AutoAssinado.AlgoritmoAssinatura.Bits,
 				),
 			})
 		}
@@ -90,8 +96,12 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"[ok] [signature] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
+				"[ok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
+				MunicipioByFile(path),
+				ZonaByFile(path),
+				SecaoByFile(path),
+				a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+				a.AutoAssinado.AlgoritmoAssinatura.Bits,
 			),
 		})
 	}
@@ -125,10 +135,15 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 		if err != nil {
 			if err.Error() != "no certificate" {
 				results = append(results, VerificationResult{
-					Ok: false,
+					Ok:  false,
+					Err: err,
 					Msg: fmt.Sprintf(
-						"[nok] [signature] %s, zona=%s, secao=%s",
-						MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
+						"[nok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
+						MunicipioByFile(arquivo.NomeArquivo),
+						ZonaByFile(arquivo.NomeArquivo),
+						SecaoByFile(arquivo.NomeArquivo),
+						a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+						a.AutoAssinado.AlgoritmoAssinatura.Bits,
 					),
 				})
 			}
@@ -136,8 +151,12 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			results = append(results, VerificationResult{
 				Ok: true,
 				Msg: fmt.Sprintf(
-					"[ok] [signature] %s, zona=%s, secao=%s",
-					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
+					"[ok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
+					MunicipioByFile(arquivo.NomeArquivo),
+					ZonaByFile(arquivo.NomeArquivo),
+					SecaoByFile(arquivo.NomeArquivo),
+					a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+					a.AutoAssinado.AlgoritmoAssinatura.Bits,
 				),
 			})
 		}
@@ -188,10 +207,15 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 	if err != nil {
 		if err.Error() != "no certificate" {
 			results = append(results, VerificationResult{
-				Ok: false,
+				Ok:  false,
+				Err: err,
 				Msg: fmt.Sprintf(
-					"[nok] [signature] auto content of %s, zona=%s, secao=%s",
-					MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
+					"[nok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
+					MunicipioByFile(ctx.Filename),
+					ZonaByFile(ctx.Filename),
+					SecaoByFile(ctx.Filename),
+					assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+					assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
 				),
 			})
 		}
@@ -199,8 +223,12 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 		results = append(results, VerificationResult{
 			Ok: true,
 			Msg: fmt.Sprintf(
-				"[ok] [signature] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
+				"[ok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
+				MunicipioByFile(ctx.Filename),
+				ZonaByFile(ctx.Filename),
+				SecaoByFile(ctx.Filename),
+				assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+				assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
 			),
 		})
 	}
@@ -240,10 +268,15 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 				if err != nil {
 					if err.Error() != "no certificate" {
 						results = append(results, VerificationResult{
-							Ok: false,
+							Ok:  false,
+							Err: err,
 							Msg: fmt.Sprintf(
-								"[nok] [signature] %s, zona=%s, secao=%s",
-								MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
+								"[nok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
+								MunicipioByFile(arquivo.NomeArquivo),
+								ZonaByFile(arquivo.NomeArquivo),
+								SecaoByFile(arquivo.NomeArquivo),
+								assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+								assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
 							),
 						})
 					}
@@ -251,8 +284,12 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 					results = append(results, VerificationResult{
 						Ok: true,
 						Msg: fmt.Sprintf(
-							"[ok] [signature] %s, zona=%s, secao=%s",
-							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
+							"[ok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
+							MunicipioByFile(arquivo.NomeArquivo),
+							ZonaByFile(arquivo.NomeArquivo),
+							SecaoByFile(arquivo.NomeArquivo),
+							assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
+							assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
 						),
 					})
 				}

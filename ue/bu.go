@@ -3,8 +3,8 @@ package ue
 import (
 	"crypto/ed25519"
 	"crypto/sha512"
-	"encoding/asn1"
 	"fmt"
+	"github.com/google/certificate-transparency-go/asn1"
 	"log"
 	"os"
 	"strings"

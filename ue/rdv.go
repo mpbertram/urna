@@ -1,7 +1,7 @@
 package ue
 
 import (
-	"encoding/asn1"
+	"github.com/google/certificate-transparency-go/asn1"
 	"os"
 )
 

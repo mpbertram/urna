@@ -3,7 +3,7 @@ package ue
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/asn1"
+	"github.com/google/certificate-transparency-go/asn1"
 	"io"
 	"log"
 	"os"
