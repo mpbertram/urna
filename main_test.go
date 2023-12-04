@@ -16,6 +16,17 @@ func TestVscmrVerify(t *testing.T) {
 	main()
 }
 
+func TestVscmrCsv(t *testing.T) {
+	realArgs := os.Args
+	defer func() {
+		os.Args = realArgs
+	}()
+
+	os.Args = []string{"", "vscmr", "csv", "ue/test-data/o00407-0100700090001.zip"}
+
+	main()
+}
+
 func TestBuVerify(t *testing.T) {
 	realArgs := os.Args
 	defer func() {
