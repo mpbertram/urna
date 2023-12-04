@@ -1,5 +1,6 @@
 .PHONY: install
 install:
+	go get github.com/google/certificate-transparency-go
 	go install github.com/google/certificate-transparency-go
 
 .PHONY: build
