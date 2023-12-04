@@ -132,25 +132,21 @@ func ValidateVotosBu(b EntidadeBoletimUrna) []VerificationResult {
 					ok := ed25519.Verify(pub, checksum[:], votoVotavel.Assinatura)
 					if !ok {
 						results = append(results, VerificationResult{
-							Ok: false,
-							Msg: fmt.Sprintf(
-								"error in verification; municipio=%s, local=%d, secao=%d, payload=%s",
-								b.IdentificacaoSecao.Municipio(),
-								b.IdentificacaoSecao.Local,
-								b.IdentificacaoSecao.Secao,
-								payload,
-							),
+							Type:      Payload,
+							Ok:        Nok,
+							Municipio: b.IdentificacaoSecao.Municipio().String(),
+							Zona:      fmt.Sprint(b.IdentificacaoSecao.Local),
+							Secao:     fmt.Sprint(b.IdentificacaoSecao.Secao),
+							Payload:   payload,
 						})
 					} else {
 						results = append(results, VerificationResult{
-							Ok: true,
-							Msg: fmt.Sprintf(
-								"verified; municipio=%s, local=%d, secao=%d, payload=%s",
-								b.IdentificacaoSecao.Municipio(),
-								b.IdentificacaoSecao.Local,
-								b.IdentificacaoSecao.Secao,
-								payload,
-							),
+							Type:      Payload,
+							Ok:        true,
+							Municipio: b.IdentificacaoSecao.Municipio().String(),
+							Zona:      fmt.Sprint(b.IdentificacaoSecao.Local),
+							Secao:     fmt.Sprint(b.IdentificacaoSecao.Secao),
+							Payload:   payload,
 						})
 					}
 				}

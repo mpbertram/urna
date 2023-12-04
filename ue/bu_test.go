@@ -16,7 +16,7 @@ func TestZip(t *testing.T) {
 		results := ValidateVotosBu(bu)
 		for _, r := range results {
 			if !r.Ok {
-				t.Error(r.Msg)
+				t.Error(r.Msg())
 			}
 		}
 
@@ -51,7 +51,7 @@ func TestBu(t *testing.T) {
 	result := ValidateVotosBu(bu)
 	for _, r := range result {
 		if !r.Ok {
-			t.Error(r.Msg)
+			t.Error(r.Msg())
 		}
 	}
 

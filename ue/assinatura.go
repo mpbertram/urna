@@ -29,10 +29,76 @@ func ReadAssinatura(file string) (EntidadeAssinaturaResultado, error) {
 	return a, nil
 }
 
+type VerificationResultStatus bool
+
+const (
+	Ok  VerificationResultStatus = true
+	Nok VerificationResultStatus = false
+)
+
+func (s VerificationResultStatus) String() string {
+	switch s {
+	case Ok:
+		return "ok"
+	default:
+		return "nok"
+	}
+}
+
+type VerificationResultType uint8
+
+const (
+	Hash      VerificationResultType = 0
+	Signature VerificationResultType = 1
+	Payload   VerificationResultType = 2
+)
+
+func (t VerificationResultType) String() string {
+	switch t {
+	case Hash:
+		return "hash"
+	case Signature:
+		return "signature"
+	case Payload:
+		return "payload"
+	default:
+		return ""
+	}
+}
+
 type VerificationResult struct {
-	Ok  bool
-	Err error
-	Msg string
+	Type      VerificationResultType
+	Ok        VerificationResultStatus
+	Err       error
+	Filename  string
+	Municipio string
+	Zona      string
+	Secao     string
+	Payload   []byte
+}
+
+func (r VerificationResult) Msg() string {
+	if r.Payload != nil {
+		return fmt.Sprintf(
+			"[%s] [%s] municipio=%s, zona=%s, secao=%s, payload=%s",
+			r.Ok.String(),
+			r.Type.String(),
+			r.Municipio,
+			r.Zona,
+			r.Secao,
+			r.Payload,
+		)
+	}
+
+	return fmt.Sprintf(
+		"[%s] [%s] file=%s municipio=%s, zona=%s, secao=%s",
+		r.Ok.String(),
+		r.Type.String(),
+		r.Filename,
+		r.Municipio,
+		r.Zona,
+		r.Secao,
+	)
 }
 
 func VerifyAssinaturaVscmr(path string) []VerificationResult {
@@ -49,61 +115,14 @@ func VerifyAssinaturaVscmr(path string) []VerificationResult {
 	return results
 }
 
-func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResult {
+func verifyAssinaturaVscmr(path string, sig EntidadeAssinatura) []VerificationResult {
 	var results []VerificationResult
 
-	conteudoAssinado, err := a.ReadConteudoAutoAssinado()
+	results = append(results, verifyAutoContent(sig, path)...)
+
+	conteudoAssinado, err := sig.ReadConteudoAssinado()
 	if err != nil {
 		log.Println(err)
-	}
-
-	checksum := sha512.Sum512(a.ConteudoAutoAssinado)
-	if !slices.Equal(checksum[:], a.AutoAssinado.Assinatura.Hash) {
-		results = append(results, VerificationResult{
-			Ok: false,
-			Msg: fmt.Sprintf(
-				"[nok] [hash] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
-			),
-		})
-	} else {
-		results = append(results, VerificationResult{
-			Ok: true,
-			Msg: fmt.Sprintf(
-				"[ok] [hash] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(path), ZonaByFile(path), SecaoByFile(path),
-			),
-		})
-	}
-
-	err = a.VerifyAutoSignature()
-	if err != nil {
-		if err.Error() != "no certificate" {
-			results = append(results, VerificationResult{
-				Ok:  false,
-				Err: err,
-				Msg: fmt.Sprintf(
-					"[nok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
-					MunicipioByFile(path),
-					ZonaByFile(path),
-					SecaoByFile(path),
-					a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-					a.AutoAssinado.AlgoritmoAssinatura.Bits,
-				),
-			})
-		}
-	} else {
-		results = append(results, VerificationResult{
-			Ok: true,
-			Msg: fmt.Sprintf(
-				"[ok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
-				MunicipioByFile(path),
-				ZonaByFile(path),
-				SecaoByFile(path),
-				a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-				a.AutoAssinado.AlgoritmoAssinatura.Bits,
-			),
-		})
 	}
 
 	for _, arquivo := range conteudoAssinado.ArquivosAssinados {
@@ -112,54 +131,8 @@ func verifyAssinaturaVscmr(path string, a EntidadeAssinatura) []VerificationResu
 			continue
 		}
 
-		checksum := sha512.Sum512(file)
-		if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
-			results = append(results, VerificationResult{
-				Ok: false,
-				Msg: fmt.Sprintf(
-					"[nok] [hash] file %s, zona=%s, secao=%s",
-					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
-				),
-			})
-		} else {
-			results = append(results, VerificationResult{
-				Ok: true,
-				Msg: fmt.Sprintf(
-					"[ok] [hash] file %s, zona=%s, secao=%s",
-					MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
-				),
-			})
-		}
-
-		err = a.VerifySignature(arquivo)
-		if err != nil {
-			if err.Error() != "no certificate" {
-				results = append(results, VerificationResult{
-					Ok:  false,
-					Err: err,
-					Msg: fmt.Sprintf(
-						"[nok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
-						MunicipioByFile(arquivo.NomeArquivo),
-						ZonaByFile(arquivo.NomeArquivo),
-						SecaoByFile(arquivo.NomeArquivo),
-						a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-						a.AutoAssinado.AlgoritmoAssinatura.Bits,
-					),
-				})
-			}
-		} else {
-			results = append(results, VerificationResult{
-				Ok: true,
-				Msg: fmt.Sprintf(
-					"[ok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
-					MunicipioByFile(arquivo.NomeArquivo),
-					ZonaByFile(arquivo.NomeArquivo),
-					SecaoByFile(arquivo.NomeArquivo),
-					a.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-					a.AutoAssinado.AlgoritmoAssinatura.Bits,
-				),
-			})
-		}
+		results = append(results, verifyHash(file, arquivo.Assinatura.Hash, arquivo.NomeArquivo))
+		results = append(results, verifySignature(sig, arquivo))
 	}
 
 	return results
@@ -176,66 +149,19 @@ func VerifyAssinaturaZip(path string) []VerificationResult {
 	return results
 }
 
-func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []VerificationResult {
+func verifyAssinaturaZip(ctx ZipProcessCtx, sig EntidadeAssinatura) []VerificationResult {
 	var results []VerificationResult
 
-	arquivosAssinados, err := assinatura.ReadConteudoAutoAssinado()
+	results = append(results, verifyAutoContent(sig, ctx.Filename)...)
+
+	conteudoAssinado, err := sig.ReadConteudoAssinado()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	checksum := sha512.Sum512(assinatura.ConteudoAutoAssinado)
-	if !slices.Equal(checksum[:], assinatura.AutoAssinado.Assinatura.Hash) {
-		results = append(results, VerificationResult{
-			Ok: false,
-			Msg: fmt.Sprintf(
-				"[nok] [hash] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
-			),
-		})
-	} else {
-		results = append(results, VerificationResult{
-			Ok: true,
-			Msg: fmt.Sprintf(
-				"[ok] [hash] auto content of %s, zona=%s, secao=%s",
-				MunicipioByFile(ctx.Filename), ZonaByFile(ctx.Filename), SecaoByFile(ctx.Filename),
-			),
-		})
-	}
-
-	err = assinatura.VerifyAutoSignature()
-	if err != nil {
-		if err.Error() != "no certificate" {
-			results = append(results, VerificationResult{
-				Ok:  false,
-				Err: err,
-				Msg: fmt.Sprintf(
-					"[nok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
-					MunicipioByFile(ctx.Filename),
-					ZonaByFile(ctx.Filename),
-					SecaoByFile(ctx.Filename),
-					assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-					assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
-				),
-			})
-		}
-	} else {
-		results = append(results, VerificationResult{
-			Ok: true,
-			Msg: fmt.Sprintf(
-				"[ok] [signature] auto content of %s, zona=%s, secao=%s, algo=%d, bits=%d",
-				MunicipioByFile(ctx.Filename),
-				ZonaByFile(ctx.Filename),
-				SecaoByFile(ctx.Filename),
-				assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-				assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
-			),
-		})
-	}
-
 	var count int
 	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) bool {
-		for _, arquivo := range arquivosAssinados.ArquivosAssinados {
+		for _, arquivo := range conteudoAssinado.ArquivosAssinados {
 			if f.Name == arquivo.NomeArquivo {
 				rc, err := f.Open()
 				if err != nil {
@@ -245,61 +171,15 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 				var buf bytes.Buffer
 				io.Copy(&buf, rc)
 
-				checksum := sha512.Sum512(buf.Bytes())
-				if !slices.Equal(checksum[:], arquivo.Assinatura.Hash) {
-					results = append(results, VerificationResult{
-						Ok: false,
-						Msg: fmt.Sprintf(
-							"[nok] [hash] %s, zona=%s, secao=%s",
-							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
-						),
-					})
-				} else {
-					results = append(results, VerificationResult{
-						Ok: true,
-						Msg: fmt.Sprintf(
-							"[ok] [hash] %s, zona=%s, secao=%s",
-							MunicipioByFile(arquivo.NomeArquivo), ZonaByFile(arquivo.NomeArquivo), SecaoByFile(arquivo.NomeArquivo),
-						),
-					})
-				}
-
-				err = assinatura.VerifySignature(arquivo)
-				if err != nil {
-					if err.Error() != "no certificate" {
-						results = append(results, VerificationResult{
-							Ok:  false,
-							Err: err,
-							Msg: fmt.Sprintf(
-								"[nok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
-								MunicipioByFile(arquivo.NomeArquivo),
-								ZonaByFile(arquivo.NomeArquivo),
-								SecaoByFile(arquivo.NomeArquivo),
-								assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-								assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
-							),
-						})
-					}
-				} else {
-					results = append(results, VerificationResult{
-						Ok: true,
-						Msg: fmt.Sprintf(
-							"[ok] [signature] %s, zona=%s, secao=%s, algo=%d, bits=%d",
-							MunicipioByFile(arquivo.NomeArquivo),
-							ZonaByFile(arquivo.NomeArquivo),
-							SecaoByFile(arquivo.NomeArquivo),
-							assinatura.AutoAssinado.AlgoritmoAssinatura.Algoritmo,
-							assinatura.AutoAssinado.AlgoritmoAssinatura.Bits,
-						),
-					})
-				}
+				results = append(results, verifyHash(buf.Bytes(), arquivo.Assinatura.Hash, arquivo.NomeArquivo))
+				results = append(results, verifySignature(sig, arquivo))
 
 				count++
 				rc.Close()
 			}
 		}
 
-		if count == len(arquivosAssinados.ArquivosAssinados) {
+		if count == len(conteudoAssinado.ArquivosAssinados) {
 			count = 0
 			return true
 		}
@@ -308,4 +188,87 @@ func verifyAssinaturaZip(ctx ZipProcessCtx, assinatura EntidadeAssinatura) []Ver
 	})
 
 	return results
+}
+
+func verifyAutoContent(sig EntidadeAssinatura, filename string) []VerificationResult {
+	var results []VerificationResult
+	results = append(results, verifyHash(sig.ConteudoAutoAssinado, sig.AutoAssinado.Assinatura.Hash, filename))
+	results = append(results, verifyAutoSignature(sig, filename))
+	return results
+}
+
+func verifyHash(content []byte, hash []byte, filename string) VerificationResult {
+	checksum := sha512.Sum512(content)
+	if !slices.Equal(checksum[:], hash) {
+		return newHashError(filename)
+	}
+
+	return newHashOk(filename)
+}
+
+func verifyAutoSignature(assinatura EntidadeAssinatura, filename string) VerificationResult {
+	err := assinatura.VerifyAutoSignature()
+	if err != nil {
+		if err.Error() != "no certificate" {
+			return newSigError(err, filename)
+		}
+	}
+
+	return newSigOk(filename)
+}
+
+func verifySignature(assinatura EntidadeAssinatura, arquivo AssinaturaArquivo) VerificationResult {
+	err := assinatura.VerifySignature(arquivo)
+	if err != nil {
+		if err.Error() != "no certificate" {
+			return newSigError(err, arquivo.NomeArquivo)
+		}
+	}
+
+	return newSigOk(arquivo.NomeArquivo)
+}
+
+func newSigOk(filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Signature,
+		Ok:        Ok,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
+}
+
+func newSigError(err error, filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Signature,
+		Ok:        Nok,
+		Err:       err,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
+}
+
+func newHashOk(filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Hash,
+		Ok:        Ok,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
+}
+
+func newHashError(filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Hash,
+		Ok:        Nok,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
 }

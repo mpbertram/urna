@@ -106,7 +106,7 @@ func (alg AlgoritmoHash) GetHashFunction() (crypto.Hash, error) {
 	}
 }
 
-func (sig EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
+func (sig EntidadeAssinatura) ReadConteudoAssinado() (Assinatura, error) {
 	var a Assinatura
 	_, err := asn1.Unmarshal(sig.ConteudoAutoAssinado, &a)
 	if err != nil {

@@ -166,7 +166,7 @@ func verifyBu(files []string) {
 
 				results := urna.ValidateVotosBu(ebu)
 				for _, r := range results {
-					log.Println(r.Msg)
+					log.Println(r.Msg())
 				}
 
 				return nil
@@ -181,7 +181,7 @@ func verifyBu(files []string) {
 
 			results := urna.ValidateVotosBu(bu)
 			for _, r := range results {
-				log.Println(r.Msg)
+				log.Println(r.Msg())
 			}
 		}
 	}

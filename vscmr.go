@@ -30,7 +30,7 @@ func verifyVscmr(files []string) {
 		if strings.HasSuffix(f, ".zip") {
 			result := urna.VerifyAssinaturaZip(f)
 			for _, r := range result {
-				log.Println(r.Msg)
+				log.Println(r.Msg())
 				if r.Err != nil {
 					log.Println(r.Err)
 				}
@@ -40,7 +40,7 @@ func verifyVscmr(files []string) {
 		if strings.HasSuffix(f, ".vscmr") {
 			result := urna.VerifyAssinaturaVscmr(f)
 			for _, r := range result {
-				log.Println(r.Msg)
+				log.Println(r.Msg())
 				if r.Err != nil {
 					log.Println(r.Err)
 				}

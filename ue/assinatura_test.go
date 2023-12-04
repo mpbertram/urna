@@ -14,7 +14,7 @@ func TestAssinatura(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = vscmr.AssinaturaHW.ReadConteudoAutoAssinado()
+	_, err = vscmr.AssinaturaHW.ReadConteudoAssinado()
 	if err != nil {
 		t.Error(err)
 	}
