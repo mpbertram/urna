@@ -91,6 +91,21 @@ type EntidadeAssinatura struct {
 	ConjuntoChave        string                `asn1:"optional"` // Identificador do conjunto de chaves usado para assinar o pacote.
 }
 
+func (alg AlgoritmoHash) GetHashFunction() (crypto.Hash, error) {
+	switch alg {
+	case Sha1:
+		return crypto.SHA1, nil
+	case Sha256:
+		return crypto.SHA256, nil
+	case Sha384:
+		return crypto.SHA384, nil
+	case Sha512:
+		return crypto.SHA512, nil
+	default:
+		return 0, errors.New("invalid hash function")
+	}
+}
+
 func (sig EntidadeAssinatura) GetSinatureAlgorithm() (x509.SignatureAlgorithm, error) {
 	algHash, err := AlgoritmoHashFromData(int(sig.AutoAssinado.AlgoritmoHash.Algoritmo))
 	if err != nil {
@@ -185,8 +200,18 @@ func (sig EntidadeAssinatura) verifySignature(digSig AssinaturaDigital) error {
 
 	switch publicKey := cert.PublicKey.(type) {
 	case *ecdsa.PublicKey:
+		algHash, err := AlgoritmoHashFromData(int(sig.AutoAssinado.AlgoritmoHash.Algoritmo))
+		if err != nil {
+			return err
+		}
+
 		signed := digSig.Hash
-		hashType := crypto.SHA512
+
+		hashType, err := algHash.GetHashFunction()
+		if err != nil {
+			return err
+		}
+
 		hash := hashType.New()
 		hash.Write(signed)
 		signed = hash.Sum(nil)
