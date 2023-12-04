@@ -106,24 +106,6 @@ func (alg AlgoritmoHash) GetHashFunction() (crypto.Hash, error) {
 	}
 }
 
-func (sig EntidadeAssinatura) GetSinatureAlgorithm() (x509.SignatureAlgorithm, error) {
-	algHash, err := AlgoritmoHashFromData(int(sig.AutoAssinado.AlgoritmoHash.Algoritmo))
-	if err != nil {
-		return x509.UnknownSignatureAlgorithm, err
-	}
-
-	algSig, err := AlgoritmoAssinaturaFromData(int(sig.AutoAssinado.AlgoritmoAssinatura.Algoritmo))
-	if err != nil {
-		return x509.UnknownSignatureAlgorithm, err
-	}
-
-	if algHash == Sha512 && algSig == Ecdsa {
-		return x509.ECDSAWithSHA512, nil
-	}
-
-	return x509.UnknownSignatureAlgorithm, errors.New("unsupported")
-}
-
 func (sig EntidadeAssinatura) ReadConteudoAutoAssinado() (Assinatura, error) {
 	var a Assinatura
 	_, err := asn1.Unmarshal(sig.ConteudoAutoAssinado, &a)
@@ -163,7 +145,7 @@ func (sig EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
 		if strings.Contains(err.Error(), "tags don't match") {
 			pemCert, _ := pem.Decode(sig.CertificadoDigital)
 
-			if cert, err := x509.ParseCertificate(pemCert.Bytes); err != nil {
+			if cert, err = x509.ParseCertificate(pemCert.Bytes); err != nil {
 				return &x509.Certificate{}, err
 			} else {
 				return cert, nil
@@ -229,17 +211,8 @@ func (sig EntidadeAssinatura) verifySignature(digSig AssinaturaDigital) error {
 			return errors.New("x509: ECDSA verification failure")
 		}
 	default:
-		sigAlg := cert.SignatureAlgorithm
-
-		if sigAlg == x509.UnknownSignatureAlgorithm {
-			sigAlg, err = sig.GetSinatureAlgorithm()
-			if err != nil {
-				return err
-			}
-		}
-
 		err = cert.CheckSignature(
-			sigAlg,
+			cert.SignatureAlgorithm,
 			digSig.Hash,
 			digSig.Assinatura,
 		)
