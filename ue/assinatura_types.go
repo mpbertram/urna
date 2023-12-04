@@ -3,14 +3,16 @@
 package ue
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"encoding/pem"
 	"errors"
-	"github.com/google/certificate-transparency-go/asn1"
-	"github.com/google/certificate-transparency-go/x509"
 	"math/big"
 	"strings"
+
+	"github.com/google/certificate-transparency-go/asn1"
+	"github.com/google/certificate-transparency-go/x509"
 )
 
 // ENUMS
@@ -122,7 +124,19 @@ func (sig EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
 
 	if err != nil {
 		if err.Error() == "asn1: syntax error: trailing data" {
-			cert, err := x509.ParseCertificate(sig.CertificadoDigital[:len(sig.CertificadoDigital)-1])
+			digSig := bytes.Clone(sig.CertificadoDigital)
+
+			for {
+				if bytes.HasSuffix(digSig, []byte{0x00}) {
+					digSig = digSig[:len(digSig)-1]
+					cert, err = x509.ParseCertificate(digSig)
+					if err == nil {
+						break
+					}
+				} else {
+					break
+				}
+			}
 
 			if err != nil {
 				return &x509.Certificate{}, err
