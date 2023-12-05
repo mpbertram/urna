@@ -21,8 +21,34 @@ func Vscmr() {
 		verifyVscmr(GetFlags())
 	case "csv":
 		vscmrToCsv(GetFlags())
+	case "cert":
+		parseCerts(GetFlags())
 	default:
-		fmt.Println("usage: urna vscmr verify <file_1> ... <file_n>")
+		fmt.Println("usage: urna vscmr <verify|csv|cert> <file_1> ... <file_n>")
+	}
+}
+
+func parseCerts(files []string) {
+	for _, f := range files {
+		log.Printf("processing file %s", f)
+
+		if strings.HasSuffix(f, ".zip") {
+			results := urna.VerifyCertsZip(f)
+			if len(results) > 0 {
+				for _, r := range results {
+					print(r)
+				}
+			}
+		}
+
+		if strings.HasSuffix(f, ".vscmr") {
+			results := urna.VerifyCertsVscmr(f)
+			if len(results) > 0 {
+				for _, r := range results {
+					print(r)
+				}
+			}
+		}
 	}
 }
 
@@ -113,7 +139,7 @@ func GetFlags() []string {
 		return os.Args[3:]
 	}
 
-	fmt.Println("usage: urna vscmr <verify|csv> <file_1> ... <file_n>")
+	fmt.Println("usage: urna vscmr <verify|csv|cert> <file_1> ... <file_n>")
 	os.Exit(1)
 
 	return []string{}

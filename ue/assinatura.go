@@ -48,9 +48,10 @@ func (s VerificationResultStatus) String() string {
 type VerificationResultType uint8
 
 const (
-	Hash      VerificationResultType = 0
-	Signature VerificationResultType = 1
-	Payload   VerificationResultType = 2
+	Hash        VerificationResultType = 0
+	Signature   VerificationResultType = 1
+	Payload     VerificationResultType = 2
+	Certificate VerificationResultType = 3
 )
 
 func (t VerificationResultType) String() string {
@@ -61,6 +62,8 @@ func (t VerificationResultType) String() string {
 		return "signature"
 	case Payload:
 		return "payload"
+	case Certificate:
+		return "cert"
 	default:
 		return ""
 	}
@@ -101,6 +104,46 @@ func (r VerificationResult) Msg() string {
 	)
 }
 
+func VerifyCertsVscmr(path string) []VerificationResult {
+	sig, err := ReadAssinatura(path)
+	if err != nil {
+		log.Printf("error processing %s", path)
+	}
+
+	var errors []VerificationResult
+
+	errors = append(errors, parseCertificate(sig.AssinaturaHW, path)...)
+	errors = append(errors, parseCertificate(sig.AssinaturaSW, path)...)
+
+	return errors
+}
+
+func VerifyCertsZip(path string) []VerificationResult {
+	var errors []VerificationResult
+
+	ProcessZip(path, func(sig EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
+		errors = append(errors, parseCertificate(sig.AssinaturaHW, ctx.Filename)...)
+		errors = append(errors, parseCertificate(sig.AssinaturaSW, ctx.Filename)...)
+	})
+
+	return errors
+}
+
+func parseCertificate(sig EntidadeAssinatura, path string) []VerificationResult {
+	var errors []VerificationResult
+
+	if len(sig.CertificadoDigital) > 0 {
+		_, err := sig.ParseCertificateNative()
+		if err != nil {
+			errors = append(errors, newCertError(err, path))
+		} else {
+			errors = append(errors, newCertOk(path))
+		}
+	}
+
+	return errors
+}
+
 func VerifyAssinaturaVscmr(path string) []VerificationResult {
 	a, err := ReadAssinatura(path)
 	if err != nil {
@@ -118,12 +161,12 @@ func VerifyAssinaturaVscmr(path string) []VerificationResult {
 func verifyAssinaturaVscmr(path string, sig EntidadeAssinatura) []VerificationResult {
 	var results []VerificationResult
 
-	results = append(results, verifyAutoContent(sig, path)...)
-
 	conteudoAssinado, err := sig.ReadConteudoAssinado()
 	if err != nil {
 		log.Println(err)
 	}
+
+	results = append(results, verifyAutoContent(sig, path)...)
 
 	for _, arquivo := range conteudoAssinado.ArquivosAssinados {
 		file, err := os.ReadFile(filepath.Join(filepath.Dir(path), arquivo.NomeArquivo))
@@ -152,12 +195,12 @@ func VerifyAssinaturaZip(path string) []VerificationResult {
 func verifyAssinaturaZip(ctx ZipProcessCtx, sig EntidadeAssinatura) []VerificationResult {
 	var results []VerificationResult
 
-	results = append(results, verifyAutoContent(sig, ctx.Filename)...)
-
 	conteudoAssinado, err := sig.ReadConteudoAssinado()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	results = append(results, verifyAutoContent(sig, ctx.Filename)...)
 
 	var count int
 	ProcessZipRaw(ctx.ZipFilename, func(f *zip.File) bool {
@@ -266,6 +309,29 @@ func newHashError(filename string) VerificationResult {
 	return VerificationResult{
 		Type:      Hash,
 		Ok:        Nok,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
+}
+
+func newCertOk(filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Certificate,
+		Ok:        Ok,
+		Filename:  filename,
+		Municipio: MunicipioByFile(filename),
+		Zona:      ZonaByFile(filename),
+		Secao:     SecaoByFile(filename),
+	}
+}
+
+func newCertError(err error, filename string) VerificationResult {
+	return VerificationResult{
+		Type:      Certificate,
+		Ok:        Nok,
+		Err:       err,
 		Filename:  filename,
 		Municipio: MunicipioByFile(filename),
 		Zona:      ZonaByFile(filename),

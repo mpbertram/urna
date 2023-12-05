@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	x509native "crypto/x509"
 	"encoding/pem"
 	"errors"
 	"math/big"
@@ -113,6 +114,52 @@ func (sig EntidadeAssinatura) ReadConteudoAssinado() (Assinatura, error) {
 		return Assinatura{}, err
 	}
 	return a, nil
+}
+
+func (sig EntidadeAssinatura) ParseCertificateNative() (*x509native.Certificate, error) {
+	cert, err := x509native.ParseCertificate(sig.CertificadoDigital)
+
+	if err != nil {
+		if err.Error() == "x509: trailing data" {
+			digSig := bytes.Clone(sig.CertificadoDigital)
+
+			for {
+				if bytes.HasSuffix(digSig, []byte{0x00}) {
+					digSig = digSig[:len(digSig)-1]
+					cert, err = x509native.ParseCertificate(digSig)
+					if err == nil {
+						break
+					}
+				} else {
+					break
+				}
+			}
+
+			if err != nil {
+				return &x509native.Certificate{}, err
+			}
+
+			return cert, nil
+		}
+
+		if strings.Contains(err.Error(), "malformed") {
+			pemCert, _ := pem.Decode(sig.CertificadoDigital)
+
+			if cert, err = x509native.ParseCertificate(pemCert.Bytes); err != nil {
+				return &x509native.Certificate{}, err
+			} else {
+				if cert.PublicKey == nil {
+					return cert, errors.New("no public key")
+				}
+
+				return cert, nil
+			}
+		}
+
+		return &x509native.Certificate{}, err
+	}
+
+	return cert, nil
 }
 
 func (sig EntidadeAssinatura) ParseCertificate() (*x509.Certificate, error) {
