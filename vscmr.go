@@ -23,8 +23,24 @@ func Vscmr() {
 		vscmrToCsv(GetFlags())
 	case "cert":
 		parseCerts(GetFlags())
+	case "export":
+		exportCerts(GetFlags())
 	default:
-		fmt.Println("usage: urna vscmr <verify|csv|cert> <file_1> ... <file_n>")
+		fmt.Println("usage: urna vscmr <verify|csv|cert|export> <file_1> ... <file_n>")
+	}
+}
+
+func exportCerts(files []string) {
+	for _, f := range files {
+		log.Printf("processing file %s", f)
+
+		if strings.HasSuffix(f, ".zip") {
+			urna.ExportCertsZip(f)
+		}
+
+		if strings.HasSuffix(f, ".vscmr") {
+			urna.ExportCertsVscmr(f)
+		}
 	}
 }
 

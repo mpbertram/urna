@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"fmt"
-	"github.com/google/certificate-transparency-go/asn1"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/google/certificate-transparency-go/asn1"
 
 	"golang.org/x/exp/slices"
 )
@@ -102,6 +104,41 @@ func (r VerificationResult) Msg() string {
 		r.Zona,
 		r.Secao,
 	)
+}
+
+func ExportCertsVscmr(path string) {
+	sig, err := ReadAssinatura(path)
+	if err != nil {
+		log.Printf("error processing %s", path)
+	}
+
+	exportCertificate(path, sig.AssinaturaHW)
+	exportCertificate(path, sig.AssinaturaSW)
+}
+
+func ExportCertsZip(path string) {
+	ProcessZip(path, func(sig EntidadeAssinaturaResultado, ctx ZipProcessCtx) {
+		exportCertificate(ctx.Filename, sig.AssinaturaHW)
+		exportCertificate(ctx.Filename, sig.AssinaturaSW)
+	})
+}
+
+func exportCertificate(path string, data EntidadeAssinatura) {
+	if len(data.CertificadoDigital) > 0 {
+		err := os.WriteFile(
+			strings.ReplaceAll(MunicipioByFile(path), " ", "_")+
+				"_"+ZonaByFile(path)+
+				"_"+SecaoByFile(path)+
+				"_"+string(data.DataHoraCriacao)+
+				".cer",
+			data.CertificadoDigital,
+			0644,
+		)
+
+		if err != nil {
+			log.Print(err)
+		}
+	}
 }
 
 func VerifyCertsVscmr(path string) []VerificationResult {
